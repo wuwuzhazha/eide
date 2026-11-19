@@ -44,7 +44,7 @@ import { ToolchainName } from './ToolchainManager';
 import { HexUploaderType } from "./HexUploader";
 import { VirtualSource } from "./EIDEProject";
 import * as utility from './utility';
-import { hasExternalConfigChange } from './ProjectConfigReload';
+import { canApplyProjectConfigInPlace, hasExternalConfigChange } from './ProjectConfigReload';
 import { CompileConfigModel, UploadConfigModel, SdccCompileConfigModel, GccCompileConfigModel, RiscvCompileConfigModel, AnyGccCompileConfigModel, MipsCompileConfigModel } from './EIDEProjectModules';
 
 // ----------------------------------------------------------
@@ -53,6 +53,8 @@ import { CompileConfigModel, UploadConfigModel, SdccCompileConfigModel, GccCompi
 
 // !! eide project config file version !!
 export const EIDE_CONF_VERSION = '4.1';
+
+const projectFileChangeDebounceMs = 1500;
 
 //
 //  'C51': 8BIT MCU Project (like: mcs51, stm8, ...)
@@ -559,7 +561,7 @@ export class ProjectConfiguration<T extends BuilderConfigData>
             this.__fileChgEvtEmitDelayTimer = setTimeout((this_: ProjectConfiguration<any>) => {
                 this_.__fileChgEvtEmitDelayTimer = undefined;
                 this_.emit('dataChanged', { type: 'projectFileChanged' });
-            }, 600, this);
+            }, projectFileChangeDebounceMs, this);
         }
     }
 
@@ -1597,26 +1599,76 @@ export class ProjectConfiguration<T extends BuilderConfigData>
         }
     }
 
+    hasExternalChange(): boolean {
+        try {
+            const content = this.cfgFile.Read();
+            return hasExternalConfigChange(content, this.lastSyncedContent, (a, b) => this.compare(a, b));
+        } catch {
+            return true;
+        }
+    }
+
+    ReloadFromFile(): boolean {
+        const text = this.cfgFile.Read();
+        const oldConfig = this.config;
+        const parsed = this.parse<T>(text);
+
+        this.config = parsed;
+        try {
+            this.postLoadConfig();
+        } catch (error) {
+            this.config = oldConfig;
+            throw error;
+        }
+
+        if (!canApplyProjectConfigInPlace(
+            {
+                type: oldConfig.type,
+                toolchain: oldConfig.toolchain,
+                uploader: oldConfig.uploader,
+                uid: oldConfig.miscInfo?.uid,
+                version: oldConfig.version
+            },
+            {
+                type: this.config.type,
+                toolchain: this.config.toolchain,
+                uploader: this.config.uploader,
+                uid: this.config.miscInfo?.uid,
+                version: this.config.version
+            }
+        )) {
+            this.config = oldConfig;
+            return false;
+        }
+
+        try {
+            this.toolchainConfigModel.rebindConfig(this.config);
+            this.toolchainConfigModel.Update(this.config.toolchainConfig);
+            this.config.toolchainConfig = this.toolchainConfigModel.data;
+
+            this.uploadConfigModel.Update(this.config.uploadConfig);
+            this.config.uploadConfig = this.uploadConfigModel.data;
+        } catch (error) {
+            this.config = oldConfig;
+            this.toolchainConfigModel.rebindConfig(oldConfig);
+            this.toolchainConfigModel.Update(oldConfig.toolchainConfig);
+            this.uploadConfigModel.Update(oldConfig.uploadConfig);
+            throw error;
+        }
+
+        this.lastSyncedContent = text;
+        return true;
+    }
+
     Save(force?: boolean) {
         const usrCtx = this.getProjectUsrCtx();
         usrCtx.target = this.config.mode; // save current target
         this.setProjectUsrCtx(usrCtx);
 
-        if (this.lastSyncedContent !== undefined) {
-            let diskContent: string | undefined;
-            try {
-                if (this.cfgFile.IsExist()) {
-                    diskContent = this.cfgFile.Read();
-                }
-            } catch {
-                diskContent = undefined;
-            }
-            if (diskContent === undefined ||
-                hasExternalConfigChange(diskContent, this.lastSyncedContent, (a, b) => this.compare(a, b))) {
-                GlobalEvent.log_warn(`'${this.FILE_NAME}' changed externally, skip saving and reload it.`);
-                this.onProjectFileChanged();
-                return;
-            }
+        if (this.lastSyncedContent !== undefined && this.hasExternalChange()) {
+            GlobalEvent.log_warn(`'${this.FILE_NAME}' changed externally, skip saving and reload it.`);
+            this.onProjectFileChanged();
+            return;
         }
 
         super.Save();

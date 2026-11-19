@@ -573,6 +573,16 @@ export const view_str$prompt$needReloadToUpdateEnv = [
     `We need relaunch plug-in to refresh internal environment variables, relaunch now ?`
 ][langIndex];
 
+export const view_str$prompt$config_reload_invalid = [
+    `工程 '{}' 的 eide.yml 解析失败，已保留当前工程状态 !`,
+    `Failed to parse eide.yml of project '{}', current project state was kept !`
+][langIndex];
+
+export const view_str$prompt$config_reload_failed = [
+    `工程 '{}' 的配置重载失败，请检查 eide.yml !`,
+    `Failed to reload config of project '{}', please check eide.yml !`
+][langIndex];
+
 export const view_str$prompt$mcp_server_disabled = [
     `MCP 服务器未启用，请先在设置中开启 'EIDE.MCP.Server.Enable' !`,
     `MCP server is disabled, enable 'EIDE.MCP.Server.Enable' first !`
@@ -606,11 +616,6 @@ export const view_str$prompt$requestAndActivateLicence = [
 export const view_str$prompt$requestAndActivateLicence_warn_setupPath = [
     `在开始之前激活之前，你必须先安装并设置编译器的路径！`,
     `Before you start activating, you must install and set the path of the compiler !`
-][langIndex];
-
-export const view_str$prompt$need_reload_project = [
-    `{} 的项目文件 eide.yml 已被更改，重新加载项目？`,
-    `The project file "eide.yml" of "{}" has been changed !, reload it ?`
 ][langIndex];
 
 export const view_str$prompt$src_folder_must_be_a_child_of_root = [

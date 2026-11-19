@@ -1474,6 +1474,25 @@ export abstract class AbstractProject implements CustomConfigurationProvider, Pr
         this.eideDirWatcher?.Close();
     }
 
+    reloadConfigFromFile(): boolean {
+        if (!this.GetConfiguration().ReloadFromFile()) {
+            return false;
+        }
+
+        this.initProjectConfig();
+        this.packManager.Reset();
+        this.dependenceManager.Reset();
+        this.initProjectComponents();
+        this.loadToolchain();
+        this.loadUploader();
+        this.dependenceManager.Refresh(true);
+        this.LoadSourceRootFolders();
+        this.onToolchainChanged();
+        this.emit('dataChanged');
+        this.clearPendingSave();
+        return true;
+    }
+
     async Create(option: CreateOptions) {
         await this.Load(this.create(option));
     }

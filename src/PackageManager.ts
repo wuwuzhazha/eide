@@ -133,6 +133,13 @@ export class PackageManager {
         this._event.removeAllListeners();
     }
 
+    Reset(): void {
+        this.packList = [];
+        this.currentPackDir = undefined;
+        this.currentDevice = undefined;
+        this._recurseList = [];
+    }
+
     Init() {
 
         /* if we have installed a pack, load and override old pack root */

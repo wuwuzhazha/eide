@@ -113,7 +113,7 @@ export async function executeTool(
             if (!prj)
                 return projectNotFound(uid);
             await new Promise(r => setTimeout(r, 1500)); // delay before reload project.
-            const ok = await explorer.reloadProject(prj.getUid(), false);
+            const ok = await explorer.reloadProject(prj.getUid());
             const result = makeTextResult(ok, ok ? 'Succeed.' : 'Failed.');
             await new Promise(r => setTimeout(r, ok ? 2000 : 500)); // delay after reload project.
             return result;

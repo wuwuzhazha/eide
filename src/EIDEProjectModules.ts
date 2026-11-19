@@ -440,6 +440,10 @@ export abstract class CompileConfigModel<T> extends ConfigModel<T> {
         this.prjConfigData = config;
     }
 
+    rebindConfig(prjConfigData: ProjectConfigData<any>): void {
+        this.prjConfigData = prjConfigData;
+    }
+
     static getInstance<T extends BuilderConfigData>(prjConfigData: ProjectConfigData<any>): CompileConfigModel<T> {
         switch (prjConfigData.toolchain) {
             case 'SDCC':

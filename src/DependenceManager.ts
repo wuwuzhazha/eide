@@ -59,6 +59,12 @@ export class DependenceManager implements ManagerInterface {
         this.compUpdateCache = new Map();
     }
 
+    Reset(): void {
+        this.componentDefines.clear();
+        this.compUpdateCache.clear();
+        this.prjType = undefined;
+    }
+
     Init() {
         this.prjType = this.project.GetConfiguration().config.type;
         this.LoadComponents();
