@@ -3614,7 +3614,8 @@ export class ProjectExplorer implements CustomConfigurationProvider {
                 throw new Error(`Project config version '${conf.version}' is newer than '${EIDE_CONF_VERSION}'`);
             }
         } catch (error) {
-            GlobalEvent.log_error(error);
+            GlobalEvent.log_warn(
+                `Failed to parse '${prj.getProjectName()}' config: ${error.message}`);
             vscode.window.setStatusBarMessage(
                 view_str$prompt$config_reload_invalid.replace('{}', prj.getProjectName()), 5000);
             return;
