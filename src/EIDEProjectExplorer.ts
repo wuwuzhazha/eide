@@ -93,7 +93,8 @@ import {
     view_str$keil_export_path_warning,
     view_str$settings$debugger,
     view_str$prompt$config_reload_invalid,
-    view_str$prompt$config_reload_failed
+    view_str$prompt$config_reload_failed,
+    view_str$prompt$config_reload_done
 } from './StringTable';
 import { CodeBuilder, BuildOptions } from './CodeBuilder';
 import { ExceptionToMessage, newMessage } from './Message';
@@ -3623,11 +3624,12 @@ export class ProjectExplorer implements CustomConfigurationProvider {
 
         this.autoReloadingProjects.add(uid);
         this.dataProvider.syncReloadPendingContext();
+        let reloaded = false;
         try {
             for (let attempt = 0; attempt < 3; attempt++) {
                 prj.clearPendingSave();
                 if (!prj.reloadConfigFromFile()) {
-                    const reloaded = await this.reloadProject(uid);
+                    reloaded = await this.reloadProject(uid);
                     if (!reloaded) {
                         GlobalEvent.show_msgbox(
                             'Error', view_str$prompt$config_reload_failed.replace('{}', prj.getProjectName()));
@@ -3635,12 +3637,13 @@ export class ProjectExplorer implements CustomConfigurationProvider {
                     break;
                 }
                 if (!prj.GetConfiguration().hasExternalChange()) {
+                    reloaded = true;
                     break;
                 }
             }
         } catch (error) {
             GlobalEvent.log_error(error);
-            const reloaded = await this.reloadProject(uid);
+            reloaded = await this.reloadProject(uid);
             if (!reloaded) {
                 GlobalEvent.show_msgbox(
                     'Error', view_str$prompt$config_reload_failed.replace('{}', prj.getProjectName()));
@@ -3654,6 +3657,10 @@ export class ProjectExplorer implements CustomConfigurationProvider {
                     void this.onProjectFileChanged(current);
                 }
             }
+        }
+        if (reloaded) {
+            vscode.window.setStatusBarMessage(
+                view_str$prompt$config_reload_done.replace('{}', prj.getProjectName()), 5000);
         }
     }
 

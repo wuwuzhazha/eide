@@ -583,6 +583,11 @@ export const view_str$prompt$config_reload_failed = [
     `Failed to reload config of project '{}', please check eide.yml !`
 ][langIndex];
 
+export const view_str$prompt$config_reload_done = [
+    `工程 '{}' 的配置已重新加载 !`,
+    `Config of project '{}' reloaded !`
+][langIndex];
+
 export const view_str$prompt$mcp_server_disabled = [
     `MCP 服务器未启用，请先在设置中开启 'EIDE.MCP.Server.Enable' !`,
     `MCP server is disabled, enable 'EIDE.MCP.Server.Enable' first !`
