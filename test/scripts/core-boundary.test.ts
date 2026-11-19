@@ -9,6 +9,7 @@ const headlessFiles = [
     'headless_main.ts',
     'headless_tools.ts',
     'headless_project.ts',
+    'headless_debug.ts',
     'mcp_proxy_tools.ts'
 ].map(name => NodePath.join(__dirname, '../../../../src/mcp', name));
 const vscodeImport = /(?:\bfrom\s+['"]vscode['"]|\brequire\s*\(\s*['"]vscode['"]\s*\))/;

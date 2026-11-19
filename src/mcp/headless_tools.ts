@@ -10,6 +10,8 @@ import { ProcessFlashService } from '../core/flash/service';
 import { Logger, ProcessRunner } from '../core/adapters';
 import { loadProjectSnapshot } from '../core/project_snapshot';
 import { BuildOverrides } from '../core/types';
+import { MiSpawn } from '../core/debug/mi';
+import { HeadlessDebugSession } from './headless_debug';
 import { HeadlessProject } from './headless_project';
 
 export interface HeadlessToolOptions {
@@ -23,6 +25,10 @@ export interface HeadlessToolOptions {
     flashTimeoutMs: number;
     runner: ProcessRunner;
     logger?: Logger;
+    gdbPath?: string;
+    debugSpawn?: MiSpawn;
+    debugCommandTimeoutMs?: number;
+    debugStopTimeoutMs?: number;
 }
 
 function makeTextResult(success: boolean, message: string): CallToolResult {
@@ -79,12 +85,19 @@ function readBuildStatistics(project: HeadlessProject): BuildStatistics {
 
 class HeadlessToolRunner {
     private readonly projects = new Map<string, HeadlessProject>();
+    private readonly debug: HeadlessDebugSession;
 
     constructor(private readonly options: HeadlessToolOptions) {
         for (const projectPath of options.projectPaths) {
             const absolute = NodePath.resolve(projectPath);
             this.projects.set(absolute, new HeadlessProject(absolute, options.target));
         }
+        this.debug = new HeadlessDebugSession({
+            gdbPath: options.gdbPath,
+            spawn: options.debugSpawn,
+            commandTimeoutMs: options.debugCommandTimeoutMs,
+            stopTimeoutMs: options.debugStopTimeoutMs
+        });
     }
 
     resolveProject(uid: string | null | undefined): HeadlessProject {
@@ -252,6 +265,30 @@ class HeadlessToolRunner {
                 const stats = readBuildStatistics(project);
                 return makeJsonResult(queryCallgraph(stats.callgraph, symbol, depth));
             }
+            case 'eide_debug_connect':
+                return makeJsonResult(await this.debug.connect(project, args));
+            case 'eide_debug_disconnect':
+                return makeJsonResult(await this.debug.disconnect());
+            case 'eide_debug_read_register':
+                return makeJsonResult(await this.debug.readRegister(args.name));
+            case 'eide_debug_read_memory':
+                return makeJsonResult(await this.debug.readMemory(args.address, args.length));
+            case 'eide_debug_write_memory':
+                return makeJsonResult(await this.debug.writeMemory(args.address, args.hex));
+            case 'eide_debug_set_breakpoint':
+                return makeJsonResult(await this.debug.setBreakpoint(args));
+            case 'eide_debug_remove_breakpoint':
+                return makeJsonResult(await this.debug.removeBreakpoint(args.id));
+            case 'eide_debug_continue':
+                return makeJsonResult(await this.debug.continue(args.stopTimeoutMs));
+            case 'eide_debug_interrupt':
+                return makeJsonResult(await this.debug.interrupt());
+            case 'eide_debug_evaluate':
+                return makeJsonResult(await this.debug.evaluate(args.expression));
+            case 'eide_debug_fault':
+                return makeJsonResult(await this.debug.fault(args));
+            case 'eide_debug_svd_lookup':
+                return makeJsonResult(await this.debug.svdLookup(project, args));
             default:
                 return makeTextResult(false, `Unknown tool: ${tool}`);
         }

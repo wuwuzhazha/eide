@@ -31,7 +31,14 @@ const taskStore = new InMemoryTaskStore();
 
 export type ToolDelegate = (tool: string, args: Record<string, unknown>) => Promise<CallToolResult>;
 
-export function createMcpServer(delegateToolCall: ToolDelegate): McpServer {
+export interface McpServerOptions {
+    debugTools?: boolean;
+}
+
+export function createMcpServer(
+    delegateToolCall: ToolDelegate,
+    options: McpServerOptions = {}
+): McpServer {
 
     const server = new McpServer(
         {
@@ -321,6 +328,176 @@ export function createMcpServer(delegateToolCall: ToolDelegate): McpServer {
         },
         async (args) => delegateToolCall('eide_query_callgraph', args)
     );
+
+    if (options.debugTools) {
+        const addressSchema = z.union([z.string(), z.number().int().nonnegative()]);
+
+        server.registerTool(
+            'eide_debug_connect',
+            {
+                title: 'Connect Debugger',
+                description: 'Start a GDB/MI debug session for the project. The session is kept until disconnect or server exit.',
+                inputSchema: {
+                    uid: uidSchema,
+                    target: z.string().min(1).describe('Remote target, for example "localhost:3333".'),
+                    elf: z.string().optional().describe('ELF file path (default: project build output).'),
+                    gdbPath: z.string().optional().describe('GDB executable path.'),
+                    mode: z.enum(['remote', 'extended-remote']).optional().describe(
+                        'GDB remote mode (default: extended-remote).')
+                }
+            },
+            async (args) => delegateToolCall('eide_debug_connect', args)
+        );
+
+        server.registerTool(
+            'eide_debug_disconnect',
+            {
+                title: 'Disconnect Debugger',
+                description: 'Close the active GDB/MI debug session.',
+                inputSchema: { uid: uidSchema }
+            },
+            async (args) => delegateToolCall('eide_debug_disconnect', args)
+        );
+
+        server.registerTool(
+            'eide_debug_read_register',
+            {
+                title: 'Read Register',
+                description: 'Read a CPU register from the active debug session.',
+                inputSchema: {
+                    uid: uidSchema,
+                    name: z.string().min(1).describe('Register name, for example "pc" or "cfsr".')
+                }
+            },
+            async (args) => delegateToolCall('eide_debug_read_register', args)
+        );
+
+        server.registerTool(
+            'eide_debug_read_memory',
+            {
+                title: 'Read Memory',
+                description: 'Read target memory and return it as a hexadecimal string.',
+                inputSchema: {
+                    uid: uidSchema,
+                    address: addressSchema.describe('Start address (number or 0x-prefixed string).'),
+                    length: z.number().int().min(1).max(1048576).describe('Number of bytes.')
+                }
+            },
+            async (args) => delegateToolCall('eide_debug_read_memory', args)
+        );
+
+        server.registerTool(
+            'eide_debug_write_memory',
+            {
+                title: 'Write Memory',
+                description: 'Write hexadecimal bytes to target memory.',
+                inputSchema: {
+                    uid: uidSchema,
+                    address: addressSchema.describe('Start address (number or 0x-prefixed string).'),
+                    hex: z.string().regex(/^[0-9a-fA-F]+$/).describe(
+                        'Even-length hexadecimal byte string.')
+                }
+            },
+            async (args) => delegateToolCall('eide_debug_write_memory', args)
+        );
+
+        server.registerTool(
+            'eide_debug_set_breakpoint',
+            {
+                title: 'Set Breakpoint',
+                description: 'Insert a software or hardware breakpoint.',
+                inputSchema: {
+                    uid: uidSchema,
+                    location: z.string().min(1).describe('Function, file:line, or address.'),
+                    hardware: z.boolean().optional().describe('Use a hardware breakpoint.'),
+                    condition: z.string().optional().describe('Optional condition expression.')
+                }
+            },
+            async (args) => delegateToolCall('eide_debug_set_breakpoint', args)
+        );
+
+        server.registerTool(
+            'eide_debug_remove_breakpoint',
+            {
+                title: 'Remove Breakpoint',
+                description: 'Remove a breakpoint by its numeric id.',
+                inputSchema: {
+                    uid: uidSchema,
+                    id: z.number().int().positive().describe('Breakpoint id.')
+                }
+            },
+            async (args) => delegateToolCall('eide_debug_remove_breakpoint', args)
+        );
+
+        server.registerTool(
+            'eide_debug_continue',
+            {
+                title: 'Continue Execution',
+                description: 'Resume the target and wait for the next stop event.',
+                inputSchema: {
+                    uid: uidSchema,
+                    stopTimeoutMs: z.number().int().positive().optional().describe(
+                        'Stop-event timeout in milliseconds (default: 30000).')
+                }
+            },
+            async (args) => delegateToolCall('eide_debug_continue', args)
+        );
+
+        server.registerTool(
+            'eide_debug_interrupt',
+            {
+                title: 'Interrupt Execution',
+                description: 'Interrupt the running target.',
+                inputSchema: { uid: uidSchema }
+            },
+            async (args) => delegateToolCall('eide_debug_interrupt', args)
+        );
+
+        server.registerTool(
+            'eide_debug_evaluate',
+            {
+                title: 'Evaluate Expression',
+                description: 'Evaluate an expression in the target context.',
+                inputSchema: {
+                    uid: uidSchema,
+                    expression: z.string().min(1).describe('Expression to evaluate.')
+                }
+            },
+            async (args) => delegateToolCall('eide_debug_evaluate', args)
+        );
+
+        server.registerTool(
+            'eide_debug_fault',
+            {
+                title: 'Decode Cortex Fault',
+                description: 'Decode Cortex-M fault status registers. Reads HFSR/CFSR/MMAR/BFAR from the active session when values are omitted.',
+                inputSchema: {
+                    uid: uidSchema,
+                    hfsr: z.number().int().nonnegative().optional(),
+                    cfsr: z.number().int().nonnegative().optional(),
+                    mmar: z.number().int().nonnegative().optional(),
+                    bfar: z.number().int().nonnegative().optional()
+                }
+            },
+            async (args) => delegateToolCall('eide_debug_fault', args)
+        );
+
+        server.registerTool(
+            'eide_debug_svd_lookup',
+            {
+                title: 'Lookup SVD',
+                description: 'Look up a peripheral or register from an SVD file by address, peripheral name, or register name.',
+                inputSchema: {
+                    uid: uidSchema,
+                    path: z.string().min(1).describe('SVD file path, relative to the project root.'),
+                    address: addressSchema.optional(),
+                    peripheral: z.string().optional(),
+                    register: z.string().optional()
+                }
+            },
+            async (args) => delegateToolCall('eide_debug_svd_lookup', args)
+        );
+    }
 
     return server;
 }

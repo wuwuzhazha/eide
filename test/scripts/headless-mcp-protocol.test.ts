@@ -70,7 +70,9 @@ async function run(): Promise<void> {
         await client.connect(transport);
 
         const tools = await client.listTools();
-        assert(tools.tools.length === 21, 'protocol: exposes 21 tools');
+        assert(tools.tools.length === 33, 'protocol: exposes 33 tools');
+        assert(tools.tools.some((tool: any) => tool.name === 'eide_debug_connect'),
+            'protocol: debug tools are exposed');
         assert(tools.tools.some((tool: any) => tool.name === 'eide_build'),
             'protocol: build tool is exposed');
 

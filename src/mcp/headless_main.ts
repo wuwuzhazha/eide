@@ -18,6 +18,7 @@ const usage = [
     '      --toolchain-path <dir> Toolchain installation directory',
     '      --schema-dir <dir>    Builder options JSON schema directory (default: <resources>/../lang)',
     '      --flasher-exe <path>  Flash tool executable',
+    '      --gdb <path>          GDB executable (default: arm-none-eabi-gdb)',
     '      --build-timeout <ms>  Build timeout (default: 1800000)',
     '      --flash-timeout <ms>  Flash timeout (default: 120000)',
     '  -h, --help                Show this help'
@@ -53,6 +54,7 @@ interface ServerArguments {
     toolchainPath: string;
     schemaDir: string;
     flasherExecutable?: string;
+    gdbPath?: string;
     buildTimeoutMs: number;
     flashTimeoutMs: number;
 }
@@ -64,6 +66,7 @@ function parseArguments(argv: string[]): ServerArguments | undefined {
     let toolchainPath: string | undefined;
     let schemaDir: string | undefined;
     let flasherExecutable: string | undefined;
+    let gdbPath: string | undefined;
     let buildTimeoutMs = DEFAULT_BUILD_TIMEOUT_MS;
     let flashTimeoutMs = DEFAULT_FLASH_TIMEOUT_MS;
 
@@ -99,6 +102,10 @@ function parseArguments(argv: string[]): ServerArguments | undefined {
                 flasherExecutable = readValue(argv, i, arg);
                 i++;
                 break;
+            case '--gdb':
+                gdbPath = readValue(argv, i, arg);
+                i++;
+                break;
             case '--build-timeout':
                 buildTimeoutMs = readTimeout(readValue(argv, i, arg), 'build timeout');
                 i++;
@@ -128,6 +135,7 @@ function parseArguments(argv: string[]): ServerArguments | undefined {
         toolchainPath,
         schemaDir: schemaDir ?? NodePath.resolve(resourcesDir, '..', 'lang'),
         flasherExecutable,
+        gdbPath,
         buildTimeoutMs,
         flashTimeoutMs
     };
@@ -151,7 +159,7 @@ export async function main(argv: string[]): Promise<number> {
         runner: new NodeProcessRunner(),
         logger: new StderrLogger()
     };
-    const server = createMcpServer(createHeadlessToolExecutor(options));
+    const server = createMcpServer(createHeadlessToolExecutor(options), { debugTools: true });
     await server.connect(new StdioServerTransport());
     return 0;
 }
