@@ -1,0 +1,297 @@
+---
+name: eide-mcp-tools
+description: >-
+  Operate EIDE Pro embedded MCU projects through MCP tools: build, rebuild,
+  clean, flash, project configuration, stack usage, callgraph, and GDB
+  debugging. Use whenever the user mentions EIDE Pro, EIDE MCP, eide-mcp,
+  headless firmware builds, MCU build/flash/debug automation, or the MCP
+  endpoint at localhost:8940 — even if they do not explicitly say "MCP".
+---
+
+# EIDE Pro MCP Tools
+
+Prefer the EIDE MCP tools over shell commands or direct `.eide/eide.yml` edits.
+The tools preserve EIDE invariants such as target-level config, dependency
+groups, env.ini expansion, and virtual source folders.
+
+## 1. Identify the server mode
+
+| Mode | How it is configured | Requires VS Code | Tools |
+|------|----------------------|------------------|-------|
+| VS Code HTTP MCP | `http://localhost:8940/mcp` plus `EIDE.MCP.Server.Enable` | Yes, with the project open | 21 project/build tools |
+| Headless stdio MCP | `eide-mcp` or `node dist/eide_mcp.js --project ...` | No | 33 tools, including 12 debug tools |
+
+If `eide_debug_*` tools are present, it is the headless server. The headless
+server discovers its projects from launch arguments, so there is no "add
+project" tool.
+
+Headless launch:
+
+```json
+{
+  "mcpServers": {
+    "eide-headless": {
+      "command": "node",
+      "args": [
+        "/path/to/eide-pro/dist/eide_mcp.js",
+        "--project", "/path/to/firmware",
+        "--resources", "/path/to/eide-pro/res",
+        "--toolchain-path", "/opt/gcc-arm-none-eabi"
+      ]
+    }
+  }
+}
+```
+
+Useful headless options: repeatable `--project`, `--target`, `--settings`
+(JSON file with `EIDE.*` values), `--gdb`, `--flasher-exe`,
+`--build-timeout`, `--flash-timeout`. A project managed by xpack does not need
+`--toolchain-path`; EIDE resolves the compiler from `package.json` and
+`xpacks/`.
+
+## 2. Rules that prevent most failures
+
+1. **Always obtain the real project UID.** Read `miscInfo.uid` from
+   `<project>/.eide/eide.yml`; every tool schema requires `uid`. Do not invent
+   one. In a multi-project headless server, a wrong UID resolves to "Not such
+   project".
+2. **Call tools sequentially.** The headless server queues calls internally,
+   but sequential `get → set → verify` is easier to reason about and avoids
+   overlapping long builds.
+3. **Prefer tools over YAML.** Use the matching `eide_get_*` first, then the
+   setter. For example: `eide_get_defines` → edit array → `eide_set_defines`.
+4. **Headless reads `eide.yml` on each call.** Manual edits are visible to the
+   next tool call, and `eide_reload` is a no-op there. In VS Code mode, call
+   `eide_reload` after manual edits.
+5. **Do not flatten EIDE features into defines/includes.** `.eide/env.ini`,
+   virtual source folders, `dependenceList`, and `.eide/files.options.yml` are
+   already consumed by the build pipeline in both modes.
+6. **Use overrides for one-off builds, not permanence.** Any non-empty
+   `overrides` object forces a rebuild. Persist settings with the config tools
+   when the change should survive.
+7. **`eide_set_builder_opts` replaces the whole options object.** Read it,
+   modify the returned structure, and send the complete object back.
+8. **Include and source paths must stay inside the project.** The setters
+   normalize paths and reject paths outside the project root.
+9. **`eide_switch_target` is session-local in headless mode.** It changes the
+   target used by later headless calls but does not rewrite `eide.yml`; pass
+   the target explicitly when starting the server if the target must be fixed.
+
+## 3. Build, flash, and clean
+
+| Tool | Arguments | Notes |
+|------|-----------|-------|
+| `eide_build` | `uid`, `overrides?`, `dryRun?` | Incremental unless overrides are supplied. |
+| `eide_rebuild` | `uid`, `overrides?`, `dryRun?` | Full rebuild. |
+| `eide_clean` | `uid` | Removes the target output directory. |
+| `eide_flash` | `uid`, `eraseAll` (required boolean) | Uses the project's uploader and configured flasher. |
+| `eide_reload` | `uid` | Useful in VS Code mode; no-op in headless mode. |
+
+Typical loop:
+
+```text
+eide_build(uid)                 → inspect success/problems/logTail
+eide_flash(uid, eraseAll=false) → only after a successful build
+```
+
+A non-dry-run build returns JSON with `success`, `stage`, `problems`,
+`memory`, `artifacts`, `compileCommands` (when generated), `effectiveConfig`,
+and `logTail` on failure. Treat `isError: true` as failure and read the text
+content even when the JSON shape is unexpected.
+
+### Build result example
+
+```json
+{
+  "success": true,
+  "stage": "link",
+  "problems": [],
+  "memory": {
+    "FLASH": { "used": 1148, "size": 131072, "percent": 0.88 },
+    "RAM": { "used": 284, "size": 20480, "percent": 1.39 }
+  },
+  "artifacts": ["build/Debug/demo.elf", "build/Debug/demo.hex"],
+  "compileCommands": "build/Debug/compile_commands.json",
+  "effectiveConfig": {
+    "target": "Debug",
+    "toolchain": "GCC",
+    "defines": ["USE_HAL"],
+    "includeDirs": ["inc"]
+  }
+}
+```
+
+`problems` entries contain `file`, `line`, `column`, `severity`, `code`, and
+`message`. On failure, `logTail` contains the useful compiler/linker tail even
+when no `compiler.log` was produced.
+
+### `dryRun`
+
+`eide_build(uid, dryRun=true)` writes `builder.params` and returns:
+
+```json
+{
+  "success": true,
+  "dryRun": true,
+  "buildId": "...",
+  "outDir": "...",
+  "builder": ".../unify_builder.exe",
+  "args": ["-p", ".../builder.params", "--no-color"],
+  "paramsFile": ".../builder.params",
+  "params": { "target": "Debug", "toolchain": "GCC", "defines": [], "incDirs": [] }
+}
+```
+
+Use it to verify overrides, include paths, dependency expansion, and env.ini
+values before spending time on a build.
+
+### Build overrides
+
+| Field | Meaning |
+|-------|---------|
+| `defines` | Extra defines, appended uniquely. |
+| `includeDirs`, `libDirs` | Extra search paths, appended uniquely. |
+| `cFlags`, `cxxFlags`, `asmFlags`, `ldFlags` | Strings appended to the matching flag. |
+| `options` | Deep patch of builder model options. |
+| `source.include`, `source.exclude` | Micromatch globs applied to the physical source list. |
+| `env` | Extra project environment values. |
+
+Because overrides force a rebuild, do not combine `eide_build` with overrides
+when the user only wants an incremental build.
+
+## 4. Project configuration
+
+All of these require `uid`.
+
+| Tool | Extra arguments | Effect |
+|------|-----------------|--------|
+| `eide_get_targets` | — | `{ actived, targets }` |
+| `eide_switch_target` | `targetName` | Select active target |
+| `eide_get_src_dirs` | — | Source root list |
+| `eide_add_src_dir` | `path` | Add a source root |
+| `eide_del_src_dir` | `path` | Remove a source root |
+| `eide_exclude_src_file` | `path` | Add file to target exclude list |
+| `eide_include_src_file` | `path` | Remove file from exclude list |
+| `eide_get_inc_dirs` | — | Target `cppPreprocessAttrs.incList` |
+| `eide_set_inc_dirs` | `paths[]` | Replace target include list |
+| `eide_get_defines` | — | Target `cppPreprocessAttrs.defineList` |
+| `eide_set_defines` | `defines[]` | Replace target define list |
+| `eide_get_builder_opts_schema` | — | Toolchain JSON schema |
+| `eide_get_builder_opts` | — | Current toolchain options |
+| `eide_set_builder_opts` | `options{}` | Replace toolchain options |
+
+`eide_get_inc_dirs` and `eide_get_defines` expose the target's own lists, not
+the merged dependency lists. Dependencies and build-in values still participate
+in the build automatically.
+
+If the builder-options schema tool is unavailable for a toolchain, use the
+structure returned by `eide_get_builder_opts` as the template instead of
+guessing field names.
+
+## 5. Build analysis
+
+| Tool | Arguments | Requires |
+|------|-----------|----------|
+| `eide_get_stack_usage` | `uid`, `topN?` (1–500, default 20) | Build with `-fstack-usage` |
+| `eide_query_callgraph` | `uid`, `symbol`, `depth?` (1–6, default 2) | Build with `-fcallgraph-info` |
+
+Both read `statistic.json` from the last successful build. If it is missing,
+enable the corresponding compiler options with `eide_set_builder_opts` and
+rebuild.
+
+## 6. Debugging (headless MCP only)
+
+The debug tools are backed by a persistent GDB/MI session. Build the project
+before connecting; the default ELF is
+`<project>/<outDir>/<target>/<projectName>.elf`.
+
+| Tool | Arguments |
+|------|-----------|
+| `eide_debug_connect` | `uid`, `target` (for example `localhost:3333`), `elf?`, `gdbPath?`, `mode?` (`extended-remote` default or `remote`) |
+| `eide_debug_disconnect` | `uid` |
+| `eide_debug_read_register` | `uid`, `name` (for example `pc`, `cfsr`) |
+| `eide_debug_read_memory` | `uid`, `address`, `length` (1–1048576 bytes) |
+| `eide_debug_write_memory` | `uid`, `address`, even-length `hex` |
+| `eide_debug_set_breakpoint` | `uid`, `location` (symbol, `file:line`, or address), `hardware?`, `condition?` |
+| `eide_debug_remove_breakpoint` | `uid`, `id` |
+| `eide_debug_continue` | `uid`, `stopTimeoutMs?` (default 30000) |
+| `eide_debug_interrupt` | `uid` |
+| `eide_debug_evaluate` | `uid`, `expression` |
+| `eide_debug_fault` | `uid`, optional `hfsr`, `cfsr`, `mmar`, `bfar` |
+| `eide_debug_svd_lookup` | `uid`, `path` (relative SVD path), plus `address?` or `peripheral?` or `register?` |
+
+Addresses accept a number or a `0x`-prefixed string. `eide_debug_fault` reads
+HFSR/CFSR/MMAR/BFAR from the active session when values are omitted. The session
+stays active until disconnect or server exit; only one session can exist at a
+time.
+
+Debug workflow:
+
+```text
+eide_debug_connect(uid, target="localhost:3333")
+eide_debug_set_breakpoint(uid, location="main")
+eide_debug_continue(uid)
+eide_debug_read_register(uid, name="pc")
+eide_debug_evaluate(uid, expression="counter")
+eide_debug_fault(uid)
+eide_debug_disconnect(uid)
+```
+
+## 7. Common workflows
+
+### Change a define and rebuild
+
+```text
+1. eide_get_defines(uid)
+2. eide_set_defines(uid, [...existing, "FEATURE=1"])
+3. eide_rebuild(uid)
+```
+
+### Add an include directory
+
+```text
+1. eide_get_inc_dirs(uid)
+2. eide_set_inc_dirs(uid, [...existing, "vendor/inc"])
+3. eide_build(uid)
+```
+
+### Add a source folder and verify compilation
+
+```text
+1. eide_add_src_dir(uid, "src/new_module")
+2. eide_get_src_dirs(uid)
+3. eide_build(uid)
+```
+
+### Test a one-off feature without changing the project
+
+```text
+1. eide_build(uid, dryRun=true, overrides={defines:["FEATURE=1"]})
+2. eide_build(uid, overrides={defines:["FEATURE=1"]})
+3. inspect problems/artifacts
+```
+
+### Modify a file-level option or env.ini manually
+
+- Headless: edit the file, then call the next tool normally. `eide_reload` is
+  available but does not change headless behavior.
+- VS Code: edit the file, then call `eide_reload(uid)` and wait for success.
+- Before editing `eide.yml`, use tools if one exists. Never invent keys or
+  change `deviceName`/`packDir` unless the user explicitly asks.
+
+## 8. Troubleshooting
+
+| Symptom | Cause and action |
+|---------|------------------|
+| `Not such project (uid=...)` | UID mismatch, or multiple headless projects and the UID belongs to another project. Re-read `miscInfo.uid`. |
+| `Toolchain 'X' is not installed or its path is not configured` | Pass `--toolchain-path` or `--settings` to headless, or configure the toolchain in VS Code. |
+| `gcc is not available from xpack` | Run `xpm install` in the project directory, or stop using the xpack path. |
+| `Builder options schema not found` | The `lang` schema directory is missing; use `eide_get_builder_opts` as a template or fix `--schema-dir`. |
+| VS Code MCP connection refused | VS Code is not running or the project is not open; check `EIDE.MCP.Server.Enable` and port 8940. |
+| Headless MCP process exits | Read the server's stderr; usually invalid `--project`, `--resources`, or project config. |
+| `A debug session is already active` | Call `eide_debug_disconnect` before connecting again. |
+| Stack/callgraph data missing | Rebuild with `-fstack-usage` / `-fcallgraph-info`. |
+| Path rejected by a config setter | The path resolves outside the project root; add the file/folder inside the project or use a build override. |
+
+Do not silently fall back to shell build/flash when MCP fails. Report the MCP
+error and fix the server or project configuration.

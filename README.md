@@ -41,7 +41,7 @@ Supported Platforms:
 * Built-in implement `C/C++ IntelliSense Provider` for `ms-vscode.cpptools`, **Not Need to** configurate `c_cpp_properties.json` file.
 * Built-in Msys Unix Shell environment.
 * Built-in Callgraph gui tool for gcc toolchain.
-* Support the basic functions of the built-in plugins when calling MCP Tools (this needs to be enabled in the settings; MCP server is disabled by default). [Skills](https://gist.github.com/github0null/5c08fb61bb4a705f1dc9b03dcb980f93)
+* Support MCP Tools for VS Code and headless CLI/MCP workflows. See the [EIDE MCP skill](./docs/skills/eide-mcp-tools/SKILL.md).
 
 ***
 

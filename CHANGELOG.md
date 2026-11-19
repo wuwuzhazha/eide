@@ -6,6 +6,13 @@ All notable version changes will be recorded in this file.
 
 ***
 
+### [Unreleased]
+
+**Docs**:
+  - Rewrote the EIDE MCP skill for both VS Code HTTP MCP and headless stdio MCP, including debug tools, overrides, build results, and troubleshooting.
+
+***
+
 ### [v4.0.0]
 
 **New**:
