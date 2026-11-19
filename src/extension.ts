@@ -51,6 +51,7 @@ import {
     view_str$prompt$requireOtherExtension, view_str$add_missed_stubs
 } from './StringTable';
 import { LogDumper } from './LogDumper';
+import { findDotnetExecutable, findInstalledDotnetRuntime, getDotnetRootDirs } from './DotnetRuntime';
 import { StatusBarManager } from './StatusBarManager';
 import { File } from '../lib/node-utility/File';
 import { newMessage, ExceptionToMessage } from './Message';
@@ -1100,30 +1101,25 @@ function exportEnvToSysPath(context?: vscode.ExtensionContext) {
 
 async function checkAndInstallRuntime() {
 
-    const dotnet_chk_cmd = `dotnet --list-runtimes`;
-
-    //
-    // if not found dotnet, preset dotnet root folder into system env
-    // dotnet path: 'C:\Program Files\dotnet'
-    //
-    if (os.platform() == 'win32') {
-        try {
-            ChildProcess.execSync(dotnet_chk_cmd);
-        } catch (error) {
-            if (platform.osType() == 'win32') {
-                platform.appendToSysEnv(process.env, ['C:\\Program Files\\dotnet']);        // for win x64
-                platform.appendToSysEnv(process.env, ['C:\\Program Files (x86)\\dotnet']);  // for win x86
-            }
+    if (os.platform() === 'win32') {
+        const dotnetDirs = getDotnetRootDirs()
+            .filter(root => File.IsFile(NodePath.join(root, 'dotnet.exe')));
+        if (dotnetDirs.length > 0) {
+            platform.appendToSysEnv(process.env, dotnetDirs);
         }
     }
+
+    const dotnetExe = findDotnetExecutable();
+    const dotnetCmd = dotnetExe ?? 'dotnet';
 
     //
     // check/install .NET
     //
     try {
         GlobalEvent.log_info('Checking .NET runtime ...');
-        GlobalEvent.log_info(`Exec cmd: '${dotnet_chk_cmd}'`);
-        const dotnetInfo = ChildProcess.execSync(dotnet_chk_cmd).toString().trim();
+        GlobalEvent.log_info(`Exec cmd: '${dotnetCmd} --list-runtimes'`);
+        const dotnetInfo = ChildProcess.execFileSync(dotnetCmd, ['--list-runtimes'], { windowsHide: true })
+            .toString().trim();
         GlobalEvent.emit('globalLog.append', dotnetInfo + os.EOL);
         // check dotnet version
         let dotnetVerLine: string | undefined;
@@ -1146,6 +1142,12 @@ async function checkAndInstallRuntime() {
     } catch (error) {
 
         GlobalEvent.log_error(error);
+
+        const installedRuntime = findInstalledDotnetRuntime(6);
+        if (installedRuntime) {
+            GlobalEvent.log_info(`.NET runtime: '${installedRuntime}' found on disk, skip installation.`);
+            return;
+        }
 
         GlobalEvent.emit('globalLog.show'); // show error log for user
         GlobalEvent.log_info('Not found [.NET6 Runtime](https://dotnet.microsoft.com/en-us/download/dotnet/6.0) !');
