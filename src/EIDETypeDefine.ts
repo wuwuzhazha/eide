@@ -24,7 +24,6 @@
 
 import * as events from 'events';
 import * as os from 'os';
-import * as fs from 'fs';
 import * as vscode from 'vscode';
 import * as NodePath from 'path';
 import { jsonc } from 'jsonc';
@@ -45,6 +44,7 @@ import { ToolchainName } from './ToolchainManager';
 import { HexUploaderType } from "./HexUploader";
 import { VirtualSource } from "./EIDEProject";
 import * as utility from './utility';
+import { hasExternalConfigChange } from './ProjectConfigReload';
 import { CompileConfigModel, UploadConfigModel, SdccCompileConfigModel, GccCompileConfigModel, RiscvCompileConfigModel, AnyGccCompileConfigModel, MipsCompileConfigModel } from './EIDEProjectModules';
 
 // ----------------------------------------------------------
@@ -283,7 +283,7 @@ export abstract class Configuration<ConfigType = any, EventType = any> {
     protected watcher: FileWatcher;
 
     protected isDelUnknownKeysWhenLoad: boolean = true;
-    protected lastSaveTime: number = 0;
+    protected lastSyncedContent: string | undefined;
 
     constructor(configFile: File, type?: ProjectType) {
         this._event = new events.EventEmitter();
@@ -298,13 +298,6 @@ export abstract class Configuration<ConfigType = any, EventType = any> {
     }
 
     public load(): Configuration<ConfigType, EventType> {
-
-        try {
-            const meta = fs.statSync(this.cfgFile.path);
-            this.lastSaveTime = meta.mtime.getTime();
-        } catch (err) {
-            // nothing todo
-        }
 
         if (this.cfgFile.IsFile()) {
             this.loadConfig(this.cfgFile.Read());
@@ -372,7 +365,7 @@ export abstract class Configuration<ConfigType = any, EventType = any> {
         this._eventMergeFlag = false;
     }
 
-    protected loadConfig(json: string): void {
+    protected loadConfig(json: string, notEmit?: boolean): void {
 
         const _configFromFile: any = this.parse(json);
 
@@ -391,13 +384,17 @@ export abstract class Configuration<ConfigType = any, EventType = any> {
         //
         this.postLoadConfig();
 
-        this._event.emit('dataChanged');
+        this.lastSyncedContent = json;
+
+        if (!notEmit) {
+            this._event.emit('dataChanged');
+        }
     }
 
     Save(force?: boolean): void {
 
         let oldContent: string | undefined;
-        let newContent: string = this.toString();
+        const newContent: string = this.toString();
 
         try {
             if (this.cfgFile.IsExist())
@@ -407,8 +404,10 @@ export abstract class Configuration<ConfigType = any, EventType = any> {
         }
 
         if (oldContent == undefined || !this.compare(oldContent, newContent)) {
-            this.lastSaveTime = Date.now();
             this.cfgFile.Write(newContent);
+            this.lastSyncedContent = newContent;
+        } else {
+            this.lastSyncedContent = oldContent;
         }
     }
 
@@ -497,14 +496,18 @@ export class ProjectConfiguration<T extends BuilderConfigData>
         };
 
         const _cb = () => {
+            let content: string;
             try {
-                const meta = fs.statSync(this.cfgFile.path);
-                if (meta.mtime.getTime() > this.lastSaveTime + 3000) {
-                    this.onProjectFileChanged();
-                }
-            } catch (err) {
-                // nothing todo
+                content = this.cfgFile.Read();
+            } catch {
+                this.onProjectFileChanged();
+                return;
             }
+            if (!hasExternalConfigChange(content, this.lastSyncedContent, (a, b) => this.compare(a, b))) {
+                this.lastSyncedContent = content;
+                return;
+            }
+            this.onProjectFileChanged();
         };
 
         this.watcher.OnChanged = _cb
@@ -1598,6 +1601,24 @@ export class ProjectConfiguration<T extends BuilderConfigData>
         const usrCtx = this.getProjectUsrCtx();
         usrCtx.target = this.config.mode; // save current target
         this.setProjectUsrCtx(usrCtx);
+
+        if (this.lastSyncedContent !== undefined) {
+            let diskContent: string | undefined;
+            try {
+                if (this.cfgFile.IsExist()) {
+                    diskContent = this.cfgFile.Read();
+                }
+            } catch {
+                diskContent = undefined;
+            }
+            if (diskContent === undefined ||
+                hasExternalConfigChange(diskContent, this.lastSyncedContent, (a, b) => this.compare(a, b))) {
+                GlobalEvent.log_warn(`'${this.FILE_NAME}' changed externally, skip saving and reload it.`);
+                this.onProjectFileChanged();
+                return;
+            }
+        }
+
         super.Save();
     }
 }
