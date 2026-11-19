@@ -71,8 +71,9 @@
         "vscode:prepublish": "webpack --mode production",
         "webpack": "webpack --mode development",
         "compile": "tsc -p ./",
+        "compile:test": "tsc -p test",
         "watch": "tsc -watch -p ./",
-        "test": "npm run compile && node ./node_modules/vscode/bin/test",
+        "test": "npm run compile && npm run compile:test && node test/run-tests.js",
         "build:callgraph-view": "npm --prefix src/html/callgraph_view run build"
     },
     "devDependencies": {
