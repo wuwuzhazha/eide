@@ -46,6 +46,7 @@ export interface BuildResult {
     problems: BuildProblem[];
     memory: { [region: string]: MemoryRegionUsage };
     artifacts: string[];
+    compileCommands?: string;
     effectiveConfig?: EffectiveBuildConfig;
     logTail?: string;
     analysisError?: string;

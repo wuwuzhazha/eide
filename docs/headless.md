@@ -91,8 +91,13 @@ Exit codes:
 | `4` | Failed to start the external tool |
 
 Build results contain `success`, `stage`, `problems`, `memory`, `artifacts`,
+`compileCommands` (when the builder produced `compile_commands.json`),
 `effectiveConfig`, and `logTail` on failure. A manifest is written to
-`<outDir>/<target>/build-manifest.json`.
+`<outDir>/<target>/build-manifest.json`. The compiler database can be fed
+directly to clangd or other language servers.
+
+When working from this repository, the CLI and MCP entries are
+`out/src/cli/main.js` and `out/src/mcp/headless_main.js` after `npm test`.
 
 ## MCP server (stdio)
 

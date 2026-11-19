@@ -14,6 +14,7 @@ export interface BuildManifest {
     includeDirs: string[];
     success: boolean;
     artifacts: string[];
+    compileCommands?: string;
 }
 
 function normalize(value: unknown): unknown {

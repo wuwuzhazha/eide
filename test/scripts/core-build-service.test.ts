@@ -101,6 +101,7 @@ async function main(): Promise<void> {
             fs.mkdirSync(outDir, { recursive: true });
             fs.writeFileSync(NodePath.join(outDir, 'compiler.log'), successLog);
             fs.writeFileSync(NodePath.join(outDir, 'demo.elf'), 'elf');
+            fs.writeFileSync(NodePath.join(outDir, 'compile_commands.json'), '[]');
             return { code: 0, stdout: 'done', stderr: '' };
         }),
         timeoutMs: 5000
@@ -121,6 +122,8 @@ async function main(): Promise<void> {
         'service: memory usage');
     assert(result.artifacts.length === 1 && result.artifacts[0].endsWith('demo.elf'),
         'service: artifacts');
+    assert(result.compileCommands.endsWith('compile_commands.json'),
+        'service: compile commands for IntelliSense');
     assert(result.effectiveConfig.cFlags === '-Wall -O2', 'service: effective config');
     assert(fs.existsSync(NodePath.join(outDir, 'build-manifest.json')), 'service: manifest written');
     assert(result.logTail === undefined, 'service: no log tail on success');

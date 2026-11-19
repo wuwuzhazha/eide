@@ -136,6 +136,8 @@ export class HeadlessBuildService implements BuildService {
         }
         const stage = detectBuildStage(logText, success);
         const artifacts = collectArtifacts(plan.outDir);
+        const compileCommandsPath = NodePath.join(plan.outDir, 'compile_commands.json');
+        const compileCommands = fs.existsSync(compileCommandsPath) ? compileCommandsPath : undefined;
 
         writeBuildManifest(plan.outDir, {
             buildId: plan.buildId,
@@ -147,7 +149,8 @@ export class HeadlessBuildService implements BuildService {
             defines: plan.params.defines,
             includeDirs: plan.params.incDirs,
             success,
-            artifacts
+            artifacts,
+            compileCommands
         });
 
         return {
@@ -157,6 +160,7 @@ export class HeadlessBuildService implements BuildService {
             problems,
             memory: parseMemoryUsage(logText),
             artifacts,
+            compileCommands,
             effectiveConfig: effectiveConfig(plan.params, plan.outDir),
             logTail: success ? undefined : makeLogTail(logText),
             analysisError

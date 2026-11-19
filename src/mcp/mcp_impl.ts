@@ -88,11 +88,13 @@ function makeBuildResult(prj: AbstractProject, success: boolean, message: string
     } catch (error) {
         analysisError = error.message;
     }
+    const compileCommands = File.from(prj.getOutputFolder().path, 'compile_commands.json');
     const report = {
         success,
         stage: detectBuildStage(logText, success),
         problems,
         memory: parseMemoryUsage(logText),
+        ...(compileCommands.IsFile() ? { compileCommands: compileCommands.path } : {}),
         ...(success ? {} : { logTail: makeLogTail(message) }),
         ...(analysisError ? { analysisError } : {})
     };
