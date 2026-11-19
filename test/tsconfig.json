@@ -19,6 +19,7 @@
         "../src/GccCallgraphParser.ts",
         "../src/GccStackUsageParser.ts",
         "../src/ProjectConfigReload.ts",
+        "../src/core/**/*.ts",
         "scripts/**/*.ts"
     ]
 }
