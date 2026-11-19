@@ -1,7 +1,10 @@
 import * as fs from 'fs';
 import * as NodePath from 'path';
 
-const coreDir = NodePath.join(__dirname, '../../../../src/core');
+const roots = [
+    NodePath.join(__dirname, '../../../../src/core'),
+    NodePath.join(__dirname, '../../../../src/cli')
+];
 const vscodeImport = /(?:\bfrom\s+['"]vscode['"]|\brequire\s*\(\s*['"]vscode['"]\s*\))/;
 
 function listTypeScriptFiles(dir: string): string[] {
@@ -17,7 +20,10 @@ function listTypeScriptFiles(dir: string): string[] {
     return files;
 }
 
-const files = listTypeScriptFiles(coreDir);
+const files: string[] = [];
+for (const root of roots) {
+    files.push(...listTypeScriptFiles(root));
+}
 if (files.length === 0) {
     console.error('FAIL: no core source files found');
     process.exit(1);
@@ -27,17 +33,17 @@ const violations: string[] = [];
 for (const file of files) {
     const text = fs.readFileSync(file, 'utf8');
     if (vscodeImport.test(text)) {
-        violations.push(NodePath.relative(coreDir, file));
+        violations.push(file);
     }
 }
 
 if (violations.length > 0) {
-    console.error('FAIL: core modules depend on vscode:');
+    console.error('FAIL: core/cli modules depend on vscode:');
     for (const file of violations) {
         console.error('  -', file);
     }
     process.exit(1);
 }
 
-console.log(`OK: ${files.length} core files have no vscode dependency`);
+console.log(`OK: ${files.length} core/cli files have no vscode dependency`);
 export {};

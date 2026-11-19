@@ -1,0 +1,197 @@
+import { BuildMode, BuildOverrides } from '../core/types';
+
+export type CliCommandName = 'build' | 'rebuild' | 'clean' | 'plan';
+
+export interface CliOptions {
+    command: CliCommandName;
+    projectPath: string;
+    workspaceFile?: string;
+    target?: string;
+    profile?: string;
+    mode?: BuildMode;
+    dryRun: boolean;
+    json: boolean;
+    resourcesDir?: string;
+    toolchainPath?: string;
+    dotnetPath?: string;
+    overrides: BuildOverrides;
+}
+
+export type ParsedCli = { kind: 'help' } | { kind: 'run'; options: CliOptions };
+
+export class CliUsageError extends Error {
+    constructor(message: string) {
+        super(message);
+        this.name = 'CliUsageError';
+    }
+}
+
+export const cliHelp = [
+    'Usage: eide-cli <build|rebuild|clean|plan> --project <path> [options]',
+    '',
+    'Options:',
+    '  -p, --project <path>         Project root directory (required)',
+    '      --workspace <file>       .code-workspace file',
+    '  -t, --target <name>          Build target (defaults to project active target)',
+    '      --profile <name>         Named build profile',
+    '      --mode <mode>            incremental | rebuild',
+    '      --dry-run                Generate build plan without executing',
+    '  -D, --define <NAME[=VAL]>    Add a preprocessor define (repeatable)',
+    '      --include <dir>          Add an include directory (repeatable)',
+    '      --lib <dir>              Add a library directory (repeatable)',
+    '      --cflag <flags>          Append C compiler flags (repeatable)',
+    '      --cxxflag <flags>        Append C++ compiler flags (repeatable)',
+    '      --asmflag <flags>        Append assembler flags (repeatable)',
+    '      --ldflag <flags>         Append linker flags (repeatable)',
+    '      --resources <dir>        EIDE resources directory (tools/models)',
+    '      --toolchain-path <dir>   Toolchain installation directory',
+    '      --dotnet <path>          dotnet executable',
+    '      --json                   JSON output (default)',
+    '  -h, --help                   Show this help'
+].join('\n');
+
+function readValue(argv: string[], index: number, option: string): string {
+    const value = argv[index + 1];
+    if (value === undefined) {
+        throw new CliUsageError(`Option '${option}' requires a value.`);
+    }
+    return value;
+}
+
+function appendFlag(current: string | undefined, value: string): string {
+    const trimmed = value.trim();
+    if (trimmed.length === 0) {
+        throw new CliUsageError('Flag values cannot be empty.');
+    }
+    return current && current.length > 0 ? `${current} ${trimmed}` : trimmed;
+}
+
+export function parseCliArgs(argv: string[]): ParsedCli {
+    if (argv.length === 0) {
+        throw new CliUsageError('Missing command.');
+    }
+    if (argv[0] === '-h' || argv[0] === '--help') {
+        return { kind: 'help' };
+    }
+    const command = argv[0] as CliCommandName;
+    if (!['build', 'rebuild', 'clean', 'plan'].includes(command)) {
+        throw new CliUsageError(`Unknown command: ${command}`);
+    }
+
+    const overrides: BuildOverrides = {};
+    let projectPath: string | undefined;
+    let workspaceFile: string | undefined;
+    let target: string | undefined;
+    let profile: string | undefined;
+    let mode: BuildMode | undefined = command === 'rebuild' ? 'rebuild' : undefined;
+    let dryRun = command === 'plan';
+    let resourcesDir: string | undefined;
+    let toolchainPath: string | undefined;
+    let dotnetPath: string | undefined;
+
+    for (let i = 1; i < argv.length; i++) {
+        const arg = argv[i];
+        switch (arg) {
+            case '-h':
+            case '--help':
+                return { kind: 'help' };
+            case '-p':
+            case '--project':
+                projectPath = readValue(argv, i, arg);
+                i++;
+                break;
+            case '--workspace':
+                workspaceFile = readValue(argv, i, arg);
+                i++;
+                break;
+            case '-t':
+            case '--target':
+                target = readValue(argv, i, arg);
+                i++;
+                break;
+            case '--profile':
+                profile = readValue(argv, i, arg);
+                i++;
+                break;
+            case '--mode': {
+                const value = readValue(argv, i, arg);
+                i++;
+                if (value !== 'incremental' && value !== 'rebuild') {
+                    throw new CliUsageError(`Invalid mode: ${value}`);
+                }
+                mode = value;
+                break;
+            }
+            case '--dry-run':
+                dryRun = true;
+                break;
+            case '-D':
+            case '--define':
+                (overrides.defines ??= []).push(readValue(argv, i, arg));
+                i++;
+                break;
+            case '--include':
+                (overrides.includeDirs ??= []).push(readValue(argv, i, arg));
+                i++;
+                break;
+            case '--lib':
+                (overrides.libDirs ??= []).push(readValue(argv, i, arg));
+                i++;
+                break;
+            case '--cflag':
+                overrides.cFlags = appendFlag(overrides.cFlags, readValue(argv, i, arg));
+                i++;
+                break;
+            case '--cxxflag':
+                overrides.cxxFlags = appendFlag(overrides.cxxFlags, readValue(argv, i, arg));
+                i++;
+                break;
+            case '--asmflag':
+                overrides.asmFlags = appendFlag(overrides.asmFlags, readValue(argv, i, arg));
+                i++;
+                break;
+            case '--ldflag':
+                overrides.ldFlags = appendFlag(overrides.ldFlags, readValue(argv, i, arg));
+                i++;
+                break;
+            case '--resources':
+                resourcesDir = readValue(argv, i, arg);
+                i++;
+                break;
+            case '--toolchain-path':
+                toolchainPath = readValue(argv, i, arg);
+                i++;
+                break;
+            case '--dotnet':
+                dotnetPath = readValue(argv, i, arg);
+                i++;
+                break;
+            case '--json':
+                break;
+            default:
+                throw new CliUsageError(`Unknown option: ${arg}`);
+        }
+    }
+
+    if (!projectPath) {
+        throw new CliUsageError('Missing required option: --project');
+    }
+
+    return {
+        kind: 'run',
+        options: {
+            command,
+            projectPath,
+            workspaceFile,
+            target,
+            profile,
+            mode,
+            dryRun,
+            json: true,
+            resourcesDir,
+            toolchainPath,
+            dotnetPath,
+            overrides
+        }
+    };
+}
