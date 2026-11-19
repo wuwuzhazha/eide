@@ -1,9 +1,13 @@
+import { BuilderParamsData } from './build_plan';
 import { BuildRequest, BuildResult } from './types';
 
 export interface BuildPlan {
-    params: unknown;
+    params: BuilderParamsData;
+    paramsPath: string;
     file: string;
     args: string[];
+    outDir: string;
+    buildId: string;
 }
 
 export interface CleanResult {

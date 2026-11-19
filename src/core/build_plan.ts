@@ -208,6 +208,10 @@ function ensureSupported(snapshot: ProjectSnapshot): void {
     }
 }
 
+export function resolveOutputDir(snapshot: ProjectSnapshot): string {
+    return NodePath.resolve(snapshot.projectPath, snapshot.outDir, snapshot.target);
+}
+
 export function createBuildPlan(
     snapshot: ProjectSnapshot,
     request: BuildRequest,
@@ -225,7 +229,7 @@ export function createBuildPlan(
     const builder = builderExecutable(environment.resourcesDir);
 
     const outDirRelative = NodePath.join(snapshot.outDir, snapshot.target);
-    const outDir = NodePath.resolve(snapshot.projectPath, outDirRelative);
+    const outDir = resolveOutputDir(snapshot);
     fs.mkdirSync(outDir, { recursive: true });
 
     const sourceList = scanSourceFiles({
