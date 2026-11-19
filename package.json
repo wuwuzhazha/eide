@@ -59,8 +59,8 @@
     "icon": "res/icon/icon.png",
     "main": "./dist/extension.js",
 	"bin": {
-		"eide-cli": "./out/src/cli/main.js",
-		"eide-mcp": "./out/src/mcp/headless_main.js"
+		"eide-cli": "./dist/eide_cli.js",
+		"eide-mcp": "./dist/eide_mcp.js"
 	},
     "readme": "https://github.com/github0null/eide/blob/master/README.md",
     "bugs": {
@@ -72,8 +72,9 @@
         "type": "git"
     },
     "scripts": {
-        "vscode:prepublish": "webpack --mode production",
+        "vscode:prepublish": "webpack --mode production && webpack --config webpack.headless.config.js",
         "webpack": "webpack --mode development",
+		"webpack:headless": "webpack --config webpack.headless.config.js",
         "compile": "tsc -p ./",
         "compile:test": "tsc -p test",
         "watch": "tsc -watch -p ./",

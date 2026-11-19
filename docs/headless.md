@@ -96,8 +96,9 @@ Build results contain `success`, `stage`, `problems`, `memory`, `artifacts`,
 `<outDir>/<target>/build-manifest.json`. The compiler database can be fed
 directly to clangd or other language servers.
 
-When working from this repository, the CLI and MCP entries are
-`out/src/cli/main.js` and `out/src/mcp/headless_main.js` after `npm test`.
+The repository builds self-contained entries at `dist/eide_cli.js` and
+`dist/eide_mcp.js` (`npm run webpack:headless`). Use `node dist/eide_cli.js`
+and `node dist/eide_mcp.js` when running from a packaged extension.
 
 ## MCP server (stdio)
 
@@ -118,7 +119,7 @@ MCP configuration example:
     "eide-headless": {
       "command": "node",
       "args": [
-        "/path/to/eide/out/src/mcp/headless_main.js",
+        "/path/to/eide/dist/eide_mcp.js",
         "--project", "/path/to/firmware",
         "--resources", "/path/to/eide/res",
         "--toolchain-path", "/path/to/gcc",
