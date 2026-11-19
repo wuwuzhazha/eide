@@ -71,6 +71,8 @@ export const ipcConnectTimeoutMs = 5_000;
 export const ipcPingIntervalMs = 10_000;
 export const toolCallTimeoutMs = 300_000;
 export const healthCheckTimeoutMs = 3_000;
+export const proxyStartupTimeoutMs = 30_000;
+export const proxyStartupMaxAttempts = 2;
 
 const mcpTmpSubDir = 'eide-mcp';
 

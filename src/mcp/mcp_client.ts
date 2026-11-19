@@ -41,6 +41,8 @@ import {
     isMcpHealthCompatible,
     McpHealthResponse,
     McpProjectInfo,
+    proxyStartupMaxAttempts,
+    proxyStartupTimeoutMs,
     sendMessage,
     getLogPath
 } from './mcp_protocol';
@@ -117,7 +119,7 @@ function spawnEnv(): NodeJS.ProcessEnv {
     return env;
 }
 
-function spawnProxy(serverJs: string, httpPort: number, version: string, bundleId: string): void {
+function spawnProxy(serverJs: string, httpPort: number, version: string, bundleId: string): ExeModule {
 
     const exe = new ExeModule();
 
@@ -143,6 +145,8 @@ function spawnProxy(serverJs: string, httpPort: number, version: string, bundleI
         env: spawnEnv(),
         execArgv: []
     });
+
+    return exe;
 }
 
 async function stopProxy(pid: number): Promise<void> {
@@ -174,6 +178,41 @@ async function waitForProxyGone(httpPort: number, timeoutMs: number): Promise<vo
     }
 }
 
+async function startProxy(
+    httpPort: number,
+    serverJs: string,
+    extensionVersion: string,
+    bundleId: string
+): Promise<McpHealthResponse | undefined> {
+    const startTime = Date.now();
+    const proc = spawnProxy(serverJs, httpPort, extensionVersion, bundleId);
+
+    let health = await waitForProxyHealth(httpPort, proxyStartupTimeoutMs);
+    if (!health) {
+        health = await checkProxyHealth(httpPort);
+    }
+
+    if (health) {
+        logInfo(`MCP proxy started in ${Date.now() - startTime} ms (pid=${health.pid})`);
+        return health;
+    }
+
+    logError(
+        `MCP proxy did not become healthy after ${Date.now() - startTime} ms ` +
+        `(pid=${proc.pid() ?? 'unknown'}), see ${getLogPath(httpPort)}`
+    );
+
+    if (!proc.IsExit()) {
+        await Promise.race([
+            proc.Kill(),
+            new Promise<void>(resolve => setTimeout(resolve, ipcConnectTimeoutMs))
+        ]);
+    }
+    await waitForProxyGone(httpPort, ipcConnectTimeoutMs);
+
+    return undefined;
+}
+
 async function ensureProxyRunning(
     httpPort: number,
     serverJs: string,
@@ -193,10 +232,20 @@ async function ensureProxyRunning(
     }
 
     if (!health) {
-        spawnProxy(serverJs, httpPort, extensionVersion, bundleId);
-        health = await waitForProxyHealth(httpPort, ipcConnectTimeoutMs);
+        for (let attempt = 1; attempt <= proxyStartupMaxAttempts; attempt++) {
+            if (attempt > 1) {
+                logInfo(`Retrying MCP proxy startup (attempt ${attempt}/${proxyStartupMaxAttempts}) ...`);
+            }
+            health = await startProxy(httpPort, serverJs, extensionVersion, bundleId);
+            if (health) {
+                break;
+            }
+        }
         if (!health) {
-            throw new Error('MCP proxy failed to start');
+            throw new Error(
+                `MCP proxy failed to start after ${proxyStartupMaxAttempts} attempts, ` +
+                `see log: ${getLogPath(httpPort)}`
+            );
         }
     }
 
