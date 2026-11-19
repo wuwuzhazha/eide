@@ -23,6 +23,8 @@ export interface ProjectSnapshot {
     virtualFolder?: any;
     packDir?: string;
     deviceName?: string;
+    uploader: string;
+    uploadConfig: { [key: string]: any };
     hasDependencies: boolean;
 }
 
@@ -117,6 +119,12 @@ export function loadProjectSnapshot(projectPath: string, target?: string): Proje
             `Invalid project config: target '${targetName}' has no config for toolchain '${toolchain}'.`);
     }
     const cpp = targetConfig.cppPreprocessAttrs || {};
+    const uploader = String(targetConfig.uploader || '');
+    const uploadConfig = targetConfig.uploadConfigMap?.[uploader];
+    if (uploadConfig !== undefined
+        && (typeof uploadConfig !== 'object' || Array.isArray(uploadConfig))) {
+        throw new Error(`Invalid project config: upload config for '${uploader}' must be an object.`);
+    }
 
     const srcDirs = asStringArray(config.srcDirs, 'srcDirs')
         .map(dir => NodePath.isAbsolute(dir) ? dir : NodePath.resolve(root, dir));
@@ -140,6 +148,8 @@ export function loadProjectSnapshot(projectPath: string, target?: string): Proje
         virtualFolder: config.virtualFolder,
         packDir: config.packDir || undefined,
         deviceName: config.deviceName || undefined,
+        uploader,
+        uploadConfig: uploadConfig || {},
         hasDependencies: Array.isArray(config.dependenceList) && config.dependenceList.length > 0
     };
 }

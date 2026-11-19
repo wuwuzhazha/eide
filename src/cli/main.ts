@@ -1,6 +1,9 @@
 import { BuildExecutionError, cleanProject, HeadlessBuildService } from '../core/build_service';
+import { createFlashPlan } from '../core/flash/plan';
+import { ProcessFlashService } from '../core/flash/service';
 import { StderrLogger } from '../core/logger';
 import { NodeProcessRunner } from '../core/process_runner';
+import { loadProjectSnapshot } from '../core/project_snapshot';
 import { BuildRequest } from '../core/types';
 import { CliOptions, CliUsageError, cliHelp, parseCliArgs } from './args';
 
@@ -66,6 +69,38 @@ export async function main(argv: string[], io: CliIo = processIo): Promise<numbe
             const result = cleanProject(toRequest(options));
             writeJson(io, { command, ...result });
             return result.success ? 0 : 2;
+        }
+
+        if (command === 'flash') {
+            const snapshot = loadProjectSnapshot(
+                options.workspaceFile ?? options.projectPath, options.target);
+            const plan = createFlashPlan(snapshot, {
+                flasherExecutable: options.flasherExecutable,
+                timeoutMs: options.timeoutMs,
+                eraseAll: options.eraseAll,
+                verify: options.verify,
+                artifact: options.artifact
+            });
+            if (options.dryRun) {
+                writeJson(io, {
+                    success: true,
+                    command: 'flash',
+                    uploader: plan.uploader,
+                    executable: plan.command.executable,
+                    args: plan.command.args,
+                    script: plan.command.script,
+                    verify: plan.request.verify,
+                    eraseAll: plan.request.eraseAll,
+                    programs: plan.request.programs
+                });
+                return 0;
+            }
+            const result = await new ProcessFlashService(new NodeProcessRunner()).flash(plan.request);
+            writeJson(io, { command, uploader: plan.uploader, ...result });
+            if (result.success) {
+                return 0;
+            }
+            return result.code === 'not_supported' || result.code === 'invalid_request' ? 3 : 2;
         }
 
         const service = new HeadlessBuildService({

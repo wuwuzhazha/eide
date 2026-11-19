@@ -1,6 +1,6 @@
 import { BuildMode, BuildOverrides } from '../core/types';
 
-export type CliCommandName = 'build' | 'rebuild' | 'clean' | 'plan';
+export type CliCommandName = 'build' | 'rebuild' | 'clean' | 'plan' | 'flash';
 
 export interface CliOptions {
     command: CliCommandName;
@@ -13,11 +13,16 @@ export interface CliOptions {
     resourcesDir?: string;
     toolchainPath?: string;
     overrides: BuildOverrides;
+    flasherExecutable?: string;
+    eraseAll: boolean;
+    verify?: boolean;
+    artifact?: string;
 }
 
 export type ParsedCli = { kind: 'help' } | { kind: 'run'; options: CliOptions };
 
 export const DEFAULT_BUILD_TIMEOUT_MS = 30 * 60 * 1000;
+export const DEFAULT_FLASH_TIMEOUT_MS = 2 * 60 * 1000;
 
 export class CliUsageError extends Error {
     constructor(message: string) {
@@ -27,7 +32,7 @@ export class CliUsageError extends Error {
 }
 
 export const cliHelp = [
-    'Usage: eide-cli <build|rebuild|clean|plan> --project <path> [options]',
+    'Usage: eide-cli <build|rebuild|clean|plan|flash> --project <path> [options]',
     '',
     'Options:',
     '  -p, --project <path>         Project root directory (required)',
@@ -44,7 +49,12 @@ export const cliHelp = [
     '      --ldflag <flags>         Append linker flags (repeatable)',
     '      --resources <dir>        EIDE resources directory (tools/models)',
     '      --toolchain-path <dir>   Toolchain installation directory',
-    '      --timeout <ms>           Build timeout (default: 1800000)',
+    '      --timeout <ms>           Operation timeout (default: build 1800000, flash 120000)',
+    '      --flasher-exe <path>     Flash tool executable',
+    '      --erase-all              Erase the whole chip before flashing',
+    '      --verify                 Verify after flashing (default for capable tools)',
+    '      --no-verify              Skip post-flash verification when optional',
+    '      --artifact <path[,addr]> Override the flash artifact (default: project output)',
     '  -h, --help                   Show this help'
 ].join('\n');
 
@@ -72,7 +82,7 @@ export function parseCliArgs(argv: string[]): ParsedCli {
         return { kind: 'help' };
     }
     const command = argv[0] as CliCommandName;
-    if (!['build', 'rebuild', 'clean', 'plan'].includes(command)) {
+    if (!['build', 'rebuild', 'clean', 'plan', 'flash'].includes(command)) {
         throw new CliUsageError(`Unknown command: ${command}`);
     }
 
@@ -82,9 +92,14 @@ export function parseCliArgs(argv: string[]): ParsedCli {
     let target: string | undefined;
     let mode: BuildMode | undefined = command === 'rebuild' ? 'rebuild' : undefined;
     let dryRun = command === 'plan';
-    let timeoutMs = DEFAULT_BUILD_TIMEOUT_MS;
+    let timeoutMs = command === 'flash' ? DEFAULT_FLASH_TIMEOUT_MS : DEFAULT_BUILD_TIMEOUT_MS;
     let resourcesDir: string | undefined;
     let toolchainPath: string | undefined;
+    let flasherExecutable: string | undefined;
+    let eraseAll = false;
+    let verify: boolean | undefined;
+    let verifyOption: '--verify' | '--no-verify' | undefined;
+    let artifact: string | undefined;
 
     for (let i = 1; i < argv.length; i++) {
         const arg = argv[i];
@@ -165,6 +180,25 @@ export function parseCliArgs(argv: string[]): ParsedCli {
                 timeoutMs = parsed;
                 break;
             }
+            case '--flasher-exe':
+                flasherExecutable = readValue(argv, i, arg);
+                i++;
+                break;
+            case '--erase-all':
+                eraseAll = true;
+                break;
+            case '--verify':
+            case '--no-verify':
+                if (verifyOption !== undefined && verifyOption !== arg) {
+                    throw new CliUsageError('--verify and --no-verify cannot be combined.');
+                }
+                verifyOption = arg;
+                verify = arg === '--verify';
+                break;
+            case '--artifact':
+                artifact = readValue(argv, i, arg);
+                i++;
+                break;
             default:
                 throw new CliUsageError(`Unknown option: ${arg}`);
         }
@@ -172,6 +206,23 @@ export function parseCliArgs(argv: string[]): ParsedCli {
 
     if (!projectPath) {
         throw new CliUsageError('Missing required option: --project');
+    }
+
+    const flashOptionsUsed = flasherExecutable !== undefined || eraseAll
+        || verify !== undefined || artifact !== undefined;
+    if (command !== 'flash' && flashOptionsUsed) {
+        throw new CliUsageError('Flash options require the flash command.');
+    }
+    if (command === 'flash') {
+        if (mode !== undefined) {
+            throw new CliUsageError('--mode is not supported for flash.');
+        }
+        if (Object.keys(overrides).length > 0) {
+            throw new CliUsageError('Build overrides are not supported for flash.');
+        }
+        if (eraseAll && artifact !== undefined) {
+            throw new CliUsageError('--artifact cannot be combined with --erase-all.');
+        }
     }
 
     return {
@@ -186,7 +237,11 @@ export function parseCliArgs(argv: string[]): ParsedCli {
             timeoutMs,
             resourcesDir,
             toolchainPath,
-            overrides
+            overrides,
+            flasherExecutable,
+            eraseAll,
+            verify,
+            artifact
         }
     };
 }

@@ -1,9 +1,9 @@
 import * as fs from 'fs';
-import * as os from 'os';
 import * as NodePath from 'path';
 import * as ArmCpuUtils from '../ArmCpuUtils';
 import { applyBuildOverrides, hasBuildOverrides, OverridableBuilderParams } from './build_overrides';
 import { createBuildId } from './build_manifest';
+import { createProjectEnvironment, resolveEnvironmentVariables } from './project_env';
 import { ProjectSnapshot } from './project_snapshot';
 import { scanSourceFiles } from './source_scan';
 import { BuildOverrides, BuildRequest, BuildMode } from './types';
@@ -83,13 +83,6 @@ function toolchainPrefix(environment: BuildEnvironment): string {
     return prefix;
 }
 
-function resolveEnv(value: string, env: { [key: string]: any }): string {
-    return value.replace(/\$\{([^}]+)\}/g, (match, name) => {
-        const resolved = env[name];
-        return resolved === undefined ? match : String(resolved);
-    });
-}
-
 function fpuSuffix(cpu: string, hardOption: string): string {
     if (hardOption === 'single') {
         return ArmCpuUtils.hasFpu(cpu) ? '-sp' : '';
@@ -164,28 +157,10 @@ function builtinEnv(
     toolchainPath: string,
     builderDir: string
 ): { [name: string]: any } {
-    const root = snapshot.projectPath;
-    const outDir = NodePath.resolve(root, outDirRelative);
     return {
-        workspaceFolder: root,
-        workspaceFolderBasename: NodePath.basename(root),
-        OutDir: outDir,
-        OutDirRoot: snapshot.outDir,
-        OutDirBase: outDirRelative,
-        ProjectName: snapshot.name,
-        ConfigName: snapshot.target,
-        ProjectRoot: root,
-        ExecutableName: NodePath.join(outDir, snapshot.name),
-        ChipPackDir: snapshot.packDir || '',
-        ChipName: snapshot.deviceName || '',
-        SYS_Platform: process.platform,
-        SYS_DirSep: NodePath.sep,
-        SYS_DirSeparator: NodePath.sep,
-        SYS_PathSep: NodePath.delimiter,
-        SYS_PathSeparator: NodePath.delimiter,
-        SYS_EOL: os.EOL,
-        EIDE_BUILDER_DIR: builderDir,
-        ToolchainRoot: toolchainPath
+        ...createProjectEnvironment(snapshot, outDirRelative),
+        ToolchainRoot: toolchainPath,
+        EIDE_BUILDER_DIR: builderDir
     };
 }
 
@@ -256,9 +231,9 @@ export function createBuildPlan(
         rootDir: snapshot.projectPath,
         sourceList,
         sourceParams: {},
-        incDirs: snapshot.includeDirs.map(path => resolveEnv(path, env)),
-        libDirs: snapshot.libDirs.map(path => resolveEnv(path, env)),
-        defines: snapshot.defines.map(value => resolveEnv(value, env)),
+        incDirs: snapshot.includeDirs.map(path => resolveEnvironmentVariables(path, env)),
+        libDirs: snapshot.libDirs.map(path => resolveEnvironmentVariables(path, env)),
+        defines: snapshot.defines.map(value => resolveEnvironmentVariables(value, env)),
         options,
         env,
         sysPaths: [],

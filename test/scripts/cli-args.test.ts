@@ -71,6 +71,20 @@ assert(plan.options.dryRun === true, 'args: plan defaults to dry run');
 const clean = parseCliArgs(['clean', '--project', 'E:/demo']);
 assert(clean.options.command === 'clean', 'args: clean command');
 
+const flash = parseCliArgs(['flash', '--project', 'E:/demo', '--flasher-exe', 'E:/JLink.exe',
+    '--verify', '--artifact', 'fw.bin,0x08000000']);
+assert(flash.options.command === 'flash', 'args: flash command');
+assert(flash.options.flasherExecutable === 'E:/JLink.exe', 'args: flasher executable');
+assert(flash.options.verify === true, 'args: flash verify');
+assert(flash.options.artifact === 'fw.bin,0x08000000', 'args: flash artifact');
+assert(flash.options.timeoutMs === 120000, 'args: flash default timeout');
+
+const erase = parseCliArgs(['flash', '--project', 'E:/demo', '--erase-all']);
+assert(erase.options.eraseAll === true, 'args: erase all');
+
+const noVerify = parseCliArgs(['flash', '--project', 'E:/demo', '--no-verify']);
+assert(noVerify.options.verify === false, 'args: no verify');
+
 const help = parseCliArgs(['--help']);
 assert(help.kind === 'help', 'args: help command');
 assert(cliHelp.includes('--project'), 'args: help text mentions project');
@@ -85,6 +99,16 @@ expectUsageError(['build', '--project', 'E:/demo', '--timeout', '0'],
 expectUsageError(['build', '--project', 'E:/demo', '--unknown'],
     'args: unknown option is rejected');
 expectUsageError(['unknown', '--project', 'E:/demo'], 'args: unknown command is rejected');
+expectUsageError(['build', '--project', 'E:/demo', '--erase-all'],
+    'args: flash options require flash command');
+expectUsageError(['flash', '--project', 'E:/demo', '-D', 'A=1'],
+    'args: build overrides are rejected for flash');
+expectUsageError(['flash', '--project', 'E:/demo', '--mode', 'rebuild'],
+    'args: mode is rejected for flash');
+expectUsageError(['flash', '--project', 'E:/demo', '--verify', '--no-verify'],
+    'args: conflicting verify flags are rejected');
+expectUsageError(['flash', '--project', 'E:/demo', '--erase-all', '--artifact', 'fw.hex'],
+    'args: erase all cannot use an artifact');
 
 console.log('All CLI args tests passed.');
 export {};

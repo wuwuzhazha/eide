@@ -57,7 +57,16 @@ function projectConfig(type: string, toolchain: string): any {
                         }
                     }
                 },
-                uploadConfigMap: { JLink: {} },
+                uploadConfigMap: {
+                    JLink: {
+                        bin: '',
+                        baseAddr: '0x08000000',
+                        cpuInfo: { cpuName: 'test-device', vendor: 'ST' },
+                        proType: 1,
+                        speed: 8000,
+                        otherCmds: ''
+                    }
+                },
                 uploader: 'JLink',
                 excludeList: [],
                 cppPreprocessAttrs: { name: 'default', incList: [], libList: [], defineList: [] },
@@ -100,6 +109,17 @@ async function run(): Promise<void> {
     assert(plan.args.includes('--no-color'), 'cli: plan args');
     assert(fs.existsSync(plan.paramsFile), 'cli: plan writes builder params');
     assert(plan.params.name === 'demo', 'cli: plan includes params');
+
+    text = io();
+    code = await main(['flash', '--project', root, '--flasher-exe', 'C:/fake/JLink.exe',
+        '--dry-run'], text);
+    const flash = JSON.parse(text.out());
+    assert(code === 0 && flash.command === 'flash' && flash.uploader === 'JLink',
+        'cli: flash dry-run succeeds');
+    assert(flash.args.includes('-Device') && flash.args.includes('test-device'),
+        'cli: flash args');
+    assert(flash.programs[0].path.endsWith('demo.hex'), 'cli: flash default artifact');
+    assert(flash.script.contents.includes('loadfile'), 'cli: flash script');
 
     const outDir = NodePath.join(root, 'build', 'Debug');
     write(NodePath.join(outDir, 'old.elf'), 'elf');
