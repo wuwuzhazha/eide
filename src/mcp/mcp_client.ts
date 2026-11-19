@@ -317,12 +317,12 @@ function setupMessageHandler(sock: net.Socket, explorer: ProjectExplorer): void 
     });
 }
 
-function setupProjectSync(sock: net.Socket, explorer: ProjectExplorer): void {
+function setupProjectSync(explorer: ProjectExplorer): void {
     const pushProjects = () => {
-        if (sock.destroyed) {
+        if (!socket || socket.destroyed) {
             return;
         }
-        sendMessage(sock, { type: 'projects', projects: collectProjects(explorer) });
+        sendMessage(socket, { type: 'projects', projects: collectProjects(explorer) });
     };
     GlobalEvent.on('project.opened', pushProjects);
     GlobalEvent.on('project.closed', pushProjects);
@@ -330,8 +330,12 @@ function setupProjectSync(sock: net.Socket, explorer: ProjectExplorer): void {
 }
 
 export function mcpClientInit(explorer: ProjectExplorer, sessionId: string): void {
+    if (projectExplorer === explorer && instanceId === sessionId) {
+        return;
+    }
     projectExplorer = explorer;
     instanceId = sessionId;
+    setupProjectSync(explorer);
 }
 
 export async function mcpClientConnect(
@@ -354,7 +358,6 @@ export async function mcpClientConnect(
     socket = await connectIpc(health.ipcPort);
     setupMessageHandler(socket, projectExplorer);
     sendRegister(socket, projectExplorer);
-    setupProjectSync(socket, projectExplorer);
     startPing(socket);
 
     socket.on('close', () => {

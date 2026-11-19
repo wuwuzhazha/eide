@@ -597,6 +597,11 @@
                 "title": "%eide.function.gen_clang_format%"
             },
             {
+                "command": "eide.mcp.reconnect",
+                "category": "eide",
+                "title": "%eide.function.mcp.reconnect%"
+            },
+            {
                 "command": "eide.project.buildAndFlash",
                 "category": "eide",
                 "title": "%eide.project.buildAndFlash%"

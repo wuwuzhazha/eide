@@ -14,6 +14,7 @@
     "eide.function.reinstall.binaries": "Reinstall eide binaries",
     "eide.function.gen_clang_format": "Create new .clang-format template file",
     "eide.function.open_libs.yml": "Open Libs Generator Configuration",
+    "eide.function.mcp.reconnect": "Reconnect MCP Server",
 
     "eide.project.show_project_vars": "Show All Project Variables",
     "eide.project.save": "Save Project",

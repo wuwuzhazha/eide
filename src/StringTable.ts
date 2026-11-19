@@ -573,9 +573,19 @@ export const view_str$prompt$needReloadToUpdateEnv = [
     `We need relaunch plug-in to refresh internal environment variables, relaunch now ?`
 ][langIndex];
 
-export const view_str$prompt$needReload = [
-    `完成该操作需要重启插件，立即重启？`,
-    `To complete this operation, you need to restart the plugin. Do you want to restart it immediately ?`
+export const view_str$prompt$mcp_server_disabled = [
+    `MCP 服务器未启用，请先在设置中开启 'EIDE.MCP.Server.Enable' !`,
+    `MCP server is disabled, enable 'EIDE.MCP.Server.Enable' first !`
+][langIndex];
+
+export const view_str$prompt$mcp_reconnected = [
+    `MCP 服务器已重新连接 !`,
+    `MCP server reconnected !`
+][langIndex];
+
+export const view_str$prompt$mcp_reconnect_failed = [
+    `MCP 服务器重连失败，请查看 EIDE 输出面板中的日志 !`,
+    `Failed to reconnect MCP server, check the log in the EIDE output panel !`
 ][langIndex];
 
 export const view_str$prompt$reloadForOldProject = [

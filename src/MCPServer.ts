@@ -27,10 +27,15 @@ import { ProjectExplorer } from './EIDEProjectExplorer';
 import { GlobalEvent } from './GlobalEvents';
 import { mcpClientConnect, mcpClientDisconnect, mcpClientInit } from './mcp/mcp_client';
 
+let initialized = false;
 let started = false;
 
 export function mcpServerInit(_mcpPort: number, prjExplorer: ProjectExplorer): void {
+    if (initialized) {
+        return;
+    }
     mcpClientInit(prjExplorer, vscode.env.sessionId);
+    initialized = true;
     GlobalEvent.log_info('Init mcp client.');
 }
 
@@ -50,4 +55,13 @@ export async function mcpServerStop(): Promise<void> {
     GlobalEvent.log_info('Disconnect from mcp proxy.');
     await mcpClientDisconnect();
     started = false;
+}
+
+export async function mcpServerReconnect(
+    mcpPort: number,
+    extensionPath: string,
+    extensionVersion: string
+): Promise<void> {
+    await mcpServerStop();
+    await mcpServerStart(mcpPort, extensionPath, extensionVersion);
 }

@@ -44,6 +44,9 @@ import {
     txt_install_now, txt_yes, view_str$prompt$feedback, rating_text, later_text, sponsor_author_text,
     view_str$prompt$install_dotnet_and_restart_vscode,
     view_str$prompt$install_dotnet_failed,
+    view_str$prompt$mcp_server_disabled,
+    view_str$prompt$mcp_reconnected,
+    view_str$prompt$mcp_reconnect_failed,
     view_str$prompt$not_found_compiler, view_str$prompt$debugCfgNotSupported, not_support_no_arm_project,
     view_str$prompt$requireOtherExtension, view_str$add_missed_stubs
 } from './StringTable';
@@ -116,6 +119,7 @@ export async function activate(context: vscode.ExtensionContext) {
     subscriptions.push(vscode.commands.registerCommand('eide.ReloadStm8Devs', () => reloadStm8Devices()));
     subscriptions.push(vscode.commands.registerCommand('eide.create.clang-format.file', () => newClangFormatFile()));
     subscriptions.push(vscode.commands.registerCommand('eide.cleanCache', () => cleanCache()));
+    subscriptions.push(vscode.commands.registerCommand('eide.mcp.reconnect', () => reconnectMcpServer(context, true)));
     subscriptions.push(vscode.commands.registerCommand('eide.refresh.external_tools_index', () => {
         ResInstaller.instance()
             .refreshExternalToolsIndex(true)
@@ -394,6 +398,43 @@ function postLaunchHook(extensionCtx: vscode.ExtensionContext) {
         } catch (error) {
             GlobalEvent.log_error(error);
         }
+    }
+
+    extensionCtx.subscriptions.push(vscode.workspace.onDidChangeConfiguration((e) => {
+        if (e.affectsConfiguration('EIDE.MCP.Server.Enable') || e.affectsConfiguration('EIDE.MCP.Server.Port')) {
+            void applyMcpConfiguration(extensionCtx);
+        }
+    }));
+}
+
+async function applyMcpConfiguration(context: vscode.ExtensionContext): Promise<void> {
+    const settingManager = SettingManager.instance();
+    if (!settingManager.isMcpServerEnable()) {
+        await mcp.mcpServerStop();
+        return;
+    }
+    await reconnectMcpServer(context, false);
+}
+
+async function reconnectMcpServer(context: vscode.ExtensionContext, notifyUser: boolean): Promise<void> {
+    const settingManager = SettingManager.instance();
+    if (!settingManager.isMcpServerEnable()) {
+        if (notifyUser) {
+            vscode.window.showInformationMessage(view_str$prompt$mcp_server_disabled);
+        }
+        return;
+    }
+
+    const port = settingManager.getMcpServerPort();
+    mcp.mcpServerInit(port, projectExplorer);
+    try {
+        await mcp.mcpServerReconnect(port, context.extensionPath, context.extension.packageJSON.version);
+        if (notifyUser) {
+            vscode.window.showInformationMessage(view_str$prompt$mcp_reconnected);
+        }
+    } catch (error) {
+        GlobalEvent.log_error(error);
+        vscode.window.showErrorMessage(view_str$prompt$mcp_reconnect_failed);
     }
 }
 
