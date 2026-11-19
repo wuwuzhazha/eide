@@ -2,7 +2,7 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as NodePath from 'path';
 import * as ArmCpuUtils from '../ArmCpuUtils';
-import { applyBuildOverrides, OverridableBuilderParams } from './build_overrides';
+import { applyBuildOverrides, hasBuildOverrides, OverridableBuilderParams } from './build_overrides';
 import { createBuildId } from './build_manifest';
 import { ProjectSnapshot } from './project_snapshot';
 import { scanSourceFiles } from './source_scan';
@@ -266,7 +266,7 @@ export function createBuildPlan(
     };
 
     const effective = applyBuildOverrides(params, request.overrides);
-    const mode: BuildMode = request.mode ?? (request.overrides ? 'rebuild' : 'incremental');
+    const mode: BuildMode = request.mode ?? (hasBuildOverrides(request.overrides) ? 'rebuild' : 'incremental');
     const paramsPath = NodePath.join(outDir, 'builder.params');
     fs.writeFileSync(paramsPath, JSON.stringify(effective, undefined, 4));
 

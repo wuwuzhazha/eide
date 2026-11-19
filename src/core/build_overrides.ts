@@ -89,6 +89,10 @@ function filterSources(sourceList: string[], source: BuildOverrides['source']): 
     return result;
 }
 
+export function hasBuildOverrides(overrides: BuildOverrides | undefined): boolean {
+    return overrides !== undefined && Object.keys(overrides).length > 0;
+}
+
 export function applyBuildOverrides<T extends OverridableBuilderParams>(
     params: T, overrides: BuildOverrides | undefined): T {
     if (!overrides) {

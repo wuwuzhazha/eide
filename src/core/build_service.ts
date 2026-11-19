@@ -16,6 +16,13 @@ export interface HeadlessBuildServiceOptions extends BuildEnvironment {
     logger?: Logger;
 }
 
+export class BuildExecutionError extends Error {
+    constructor(message: string, public readonly original: unknown) {
+        super(message);
+        this.name = 'BuildExecutionError';
+    }
+}
+
 function readOptionalText(path: string): string | undefined {
     try {
         return fs.readFileSync(path, 'utf8');
@@ -63,6 +70,24 @@ function effectiveConfig(params: BuildPlan['params'], outDir: string): Effective
     };
 }
 
+export function cleanOutputDir(snapshot: ProjectSnapshot): CleanResult {
+    const outDir = resolveOutputDir(snapshot);
+    const relative = NodePath.relative(snapshot.projectPath, outDir);
+    if (relative.length === 0 || relative === '..' || relative.startsWith(`..${NodePath.sep}`)
+        || NodePath.isAbsolute(relative)) {
+        throw new Error(`Refusing to clean output directory outside project: ${outDir}`);
+    }
+    if (!fs.existsSync(outDir)) {
+        return { success: true, message: 'Output directory does not exist.' };
+    }
+    fs.rmSync(outDir, { recursive: true, force: true });
+    return { success: true, message: `Removed ${outDir}` };
+}
+
+export function cleanProject(request: BuildRequest): CleanResult {
+    return cleanOutputDir(loadProjectSnapshot(request.workspaceFile ?? request.projectPath, request.target));
+}
+
 export class HeadlessBuildService implements BuildService {
     constructor(private readonly options: HeadlessBuildServiceOptions) {
         if (!Number.isFinite(options.timeoutMs) || options.timeoutMs <= 0) {
@@ -92,7 +117,8 @@ export class HeadlessBuildService implements BuildService {
             });
         } catch (error) {
             if (!(error instanceof ProcessTimeoutError)) {
-                throw error;
+                const message = error instanceof Error ? error.message : String(error);
+                throw new BuildExecutionError(`Failed to start builder: ${message}`, error);
             }
             processResult = { code: null, stdout: error.stdout, stderr: error.stderr };
             analysisError = error.message;
@@ -108,7 +134,7 @@ export class HeadlessBuildService implements BuildService {
         if (!success && analysisError === undefined && processResult.code === null) {
             analysisError = 'Builder process terminated by a signal.';
         }
-        const stage = detectBuildStage(logText, success, problems);
+        const stage = detectBuildStage(logText, success);
         const artifacts = collectArtifacts(plan.outDir);
 
         writeBuildManifest(plan.outDir, {
@@ -138,24 +164,10 @@ export class HeadlessBuildService implements BuildService {
     }
 
     async clean(request: BuildRequest): Promise<CleanResult> {
-        const snapshot = this.loadSnapshot(request);
-        const outDir = resolveOutputDir(snapshot);
-        const relative = NodePath.relative(snapshot.projectPath, outDir);
-        if (relative.length === 0 || relative === '..' || relative.startsWith(`..${NodePath.sep}`)
-            || NodePath.isAbsolute(relative)) {
-            throw new Error(`Refusing to clean output directory outside project: ${outDir}`);
-        }
-        if (!fs.existsSync(outDir)) {
-            return { success: true, message: 'Output directory does not exist.' };
-        }
-        fs.rmSync(outDir, { recursive: true, force: true });
-        return { success: true, message: `Removed ${outDir}` };
+        return cleanProject(request);
     }
 
     private loadSnapshot(request: BuildRequest): ProjectSnapshot {
-        if (request.profile !== undefined) {
-            throw new Error('Named build profiles are not supported yet.');
-        }
-        return loadProjectSnapshot(request.projectPath, request.target);
+        return loadProjectSnapshot(request.workspaceFile ?? request.projectPath, request.target);
     }
 }

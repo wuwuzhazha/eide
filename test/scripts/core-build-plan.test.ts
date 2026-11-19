@@ -148,6 +148,13 @@ try {
     });
     assert(!incremental.args.includes('--rebuild'), 'build plan: no overrides defaults to incremental');
 
+    const emptyOverrides = createBuildPlan(snapshot, { projectPath: root, overrides: {} }, {
+        resourcesDir: resources,
+        toolchainPath: toolchain
+    });
+    assert(!emptyOverrides.args.includes('--rebuild'),
+        'build plan: empty overrides do not force rebuild');
+
     let unsupportedType = false;
     try {
         const wrong = JSON.parse(JSON.stringify(snapshot));

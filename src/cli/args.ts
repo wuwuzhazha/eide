@@ -7,17 +7,17 @@ export interface CliOptions {
     projectPath: string;
     workspaceFile?: string;
     target?: string;
-    profile?: string;
     mode?: BuildMode;
     dryRun: boolean;
-    json: boolean;
+    timeoutMs: number;
     resourcesDir?: string;
     toolchainPath?: string;
-    dotnetPath?: string;
     overrides: BuildOverrides;
 }
 
 export type ParsedCli = { kind: 'help' } | { kind: 'run'; options: CliOptions };
+
+export const DEFAULT_BUILD_TIMEOUT_MS = 30 * 60 * 1000;
 
 export class CliUsageError extends Error {
     constructor(message: string) {
@@ -33,7 +33,6 @@ export const cliHelp = [
     '  -p, --project <path>         Project root directory (required)',
     '      --workspace <file>       .code-workspace file',
     '  -t, --target <name>          Build target (defaults to project active target)',
-    '      --profile <name>         Named build profile',
     '      --mode <mode>            incremental | rebuild',
     '      --dry-run                Generate build plan without executing',
     '  -D, --define <NAME[=VAL]>    Add a preprocessor define (repeatable)',
@@ -45,8 +44,7 @@ export const cliHelp = [
     '      --ldflag <flags>         Append linker flags (repeatable)',
     '      --resources <dir>        EIDE resources directory (tools/models)',
     '      --toolchain-path <dir>   Toolchain installation directory',
-    '      --dotnet <path>          dotnet executable',
-    '      --json                   JSON output (default)',
+    '      --timeout <ms>           Build timeout (default: 1800000)',
     '  -h, --help                   Show this help'
 ].join('\n');
 
@@ -82,12 +80,11 @@ export function parseCliArgs(argv: string[]): ParsedCli {
     let projectPath: string | undefined;
     let workspaceFile: string | undefined;
     let target: string | undefined;
-    let profile: string | undefined;
     let mode: BuildMode | undefined = command === 'rebuild' ? 'rebuild' : undefined;
     let dryRun = command === 'plan';
+    let timeoutMs = DEFAULT_BUILD_TIMEOUT_MS;
     let resourcesDir: string | undefined;
     let toolchainPath: string | undefined;
-    let dotnetPath: string | undefined;
 
     for (let i = 1; i < argv.length; i++) {
         const arg = argv[i];
@@ -107,10 +104,6 @@ export function parseCliArgs(argv: string[]): ParsedCli {
             case '-t':
             case '--target':
                 target = readValue(argv, i, arg);
-                i++;
-                break;
-            case '--profile':
-                profile = readValue(argv, i, arg);
                 i++;
                 break;
             case '--mode': {
@@ -162,12 +155,16 @@ export function parseCliArgs(argv: string[]): ParsedCli {
                 toolchainPath = readValue(argv, i, arg);
                 i++;
                 break;
-            case '--dotnet':
-                dotnetPath = readValue(argv, i, arg);
+            case '--timeout': {
+                const value = readValue(argv, i, arg);
                 i++;
+                const parsed = Number(value);
+                if (!Number.isInteger(parsed) || parsed <= 0) {
+                    throw new CliUsageError(`Invalid timeout: ${value}`);
+                }
+                timeoutMs = parsed;
                 break;
-            case '--json':
-                break;
+            }
             default:
                 throw new CliUsageError(`Unknown option: ${arg}`);
         }
@@ -184,13 +181,11 @@ export function parseCliArgs(argv: string[]): ParsedCli {
             projectPath,
             workspaceFile,
             target,
-            profile,
             mode,
             dryRun,
-            json: true,
+            timeoutMs,
             resourcesDir,
             toolchainPath,
-            dotnetPath,
             overrides
         }
     };

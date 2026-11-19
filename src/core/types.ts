@@ -22,7 +22,6 @@ export interface BuildRequest {
     projectPath: string;
     workspaceFile?: string;
     target?: string;
-    profile?: string;
     mode?: BuildMode;
     dryRun?: boolean;
     overrides?: BuildOverrides;

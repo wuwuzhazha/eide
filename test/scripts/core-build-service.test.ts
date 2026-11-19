@@ -163,13 +163,12 @@ async function main(): Promise<void> {
     assert(cleanedAgain.success === true && cleanedAgain.message.includes('does not exist'),
         'service: clean is idempotent');
 
-    let profileRejected = false;
-    try {
-        await successService.plan({ projectPath: root, profile: 'release' });
-    } catch {
-        profileRejected = true;
-    }
-    assert(profileRejected, 'service: unsupported profile fails explicitly');
+    fs.writeFileSync(NodePath.join(root, 'demo.code-workspace'), '{}');
+    const workspacePlan = await successService.plan({
+        projectPath: root,
+        workspaceFile: NodePath.join(root, 'demo.code-workspace')
+    });
+    assert(workspacePlan.outDir === outDir, 'service: accepts code-workspace path');
 }
 
 main()
