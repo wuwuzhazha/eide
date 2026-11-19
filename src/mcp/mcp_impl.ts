@@ -28,6 +28,10 @@ import { AbstractProject } from '../EIDEProject';
 import { BuilderOptions } from '../EIDETypeDefine';
 import { FlashCommandResult } from '../HexUploader';
 import { loadBuilderOptionsSchema, validateBuilderOptions } from './mcp_builder_opts_validate';
+import { File } from '../../lib/node-utility/File';
+import { parseCompilerLog } from '../ProblemMatcher';
+import { BuildProblem, detectBuildStage, makeLogTail, parseMemoryUsage, toBuildProblems } from '../BuildReport';
+import { BuildStatistics, queryCallgraph, summarizeStackUsage } from '../BuildStatistics';
 
 function resolveProject(
     explorer: ProjectExplorer,
@@ -66,6 +70,57 @@ function makeJsonResult(data: unknown, isError = false): CallToolResult {
     };
 }
 
+function makeBuildResult(prj: AbstractProject, success: boolean, message: string): CallToolResult {
+    const logFile = File.from(prj.getOutputFolder().path, 'compiler.log');
+    let logText = '';
+    let problems: BuildProblem[] = [];
+    let analysisError: string | undefined;
+    try {
+        if (logFile.IsFile()) {
+            logText = logFile.Read();
+            problems = toBuildProblems(parseCompilerLog(prj.getToolchain().name, prj, logFile));
+        } else {
+            analysisError = `Build log not found: ${logFile.path}`;
+        }
+    } catch (error) {
+        analysisError = error.message;
+    }
+    const report = {
+        success,
+        stage: detectBuildStage(logText, success, problems),
+        problems,
+        memory: parseMemoryUsage(logText),
+        ...(success ? {} : { logTail: makeLogTail(message) }),
+        ...(analysisError ? { analysisError } : {})
+    };
+    return makeJsonResult(report, !success);
+}
+
+function readBuildStatistics(prj: AbstractProject): BuildStatistics {
+    const file = File.from(prj.getOutputFolder().path, 'statistic.json');
+    if (!file.IsFile()) {
+        throw new Error(
+            `Build statistics not found: ${file.path}. ` +
+            'Build the project with -fstack-usage or -fcallgraph-info first.');
+    }
+    const data = JSON.parse(file.Read());
+    if (!data || typeof data !== 'object' ||
+        !Array.isArray(data.callgraph) || !Array.isArray(data.stackusage)) {
+        throw new Error(`Invalid build statistics: ${file.path}`);
+    }
+    return data as BuildStatistics;
+}
+
+function readPositiveInt(value: unknown, fallback: number, max: number, name: string): number {
+    if (value === undefined) {
+        return fallback;
+    }
+    if (typeof value !== 'number' || !Number.isInteger(value) || value < 1 || value > max) {
+        throw new Error(`'${name}' must be an integer between 1 and ${max}.`);
+    }
+    return value;
+}
+
 export async function executeTool(
     tool: string,
     args: Record<string, unknown>,
@@ -75,19 +130,23 @@ export async function executeTool(
 
     switch (tool) {
         case 'eide_build':
-        case 'eide_rebuild':
+        case 'eide_rebuild': {
+            const prj = resolveProject(explorer, uid);
+            if (!prj)
+                return projectNotFound(uid);
+            const res = tool === 'eide_build'
+                ? await explorer.buildProject(prj, { notRebuild: true, otherArgs: ['--no-color'] }, true)
+                : await explorer.buildProject(prj, { otherArgs: ['--no-color'] }, true);
+            if (res.message === 'Builder busy ! Please wait !') {
+                return makeTextResult(false, res.message);
+            }
+            return makeBuildResult(prj, res.success, res.message);
+        }
         case 'eide_clean': {
             const prj = resolveProject(explorer, uid);
             if (!prj)
                 return projectNotFound(uid);
-            let res: { success: boolean; message: string; };
-            if (tool === 'eide_build') {
-                res = await explorer.buildProject(prj, { notRebuild: true, otherArgs: ['--no-color'] }, true);
-            } else if (tool === 'eide_rebuild') {
-                res = await explorer.buildProject(prj, { otherArgs: ['--no-color'] }, true);
-            } else {
-                res = await explorer.cleanProject(prj, true);
-            }
+            const res = await explorer.cleanProject(prj, true);
             return makeTextResult(res.success, res.message);
         }
         case 'eide_flash': {
@@ -270,6 +329,50 @@ export async function executeTool(
                 const error = err instanceof Error ? err : new Error(String(err));
                 return makeTextResult(false, 'Failed to set builder options.', error);
             }
+        }
+        case 'eide_get_stack_usage': {
+            const prj = resolveProject(explorer, uid);
+            if (!prj)
+                return projectNotFound(uid);
+            let topN: number;
+            try {
+                topN = readPositiveInt(args.topN, 20, 500, 'topN');
+            } catch (err) {
+                const error = err instanceof Error ? err : new Error(String(err));
+                return makeTextResult(false, error.message);
+            }
+            let stats: BuildStatistics;
+            try {
+                stats = readBuildStatistics(prj);
+            } catch (err) {
+                const error = err instanceof Error ? err : new Error(String(err));
+                return makeJsonResult({ available: false, reason: error.message });
+            }
+            return makeJsonResult(summarizeStackUsage(stats.stackusage, topN));
+        }
+        case 'eide_query_callgraph': {
+            const prj = resolveProject(explorer, uid);
+            if (!prj)
+                return projectNotFound(uid);
+            const symbol = typeof args.symbol === 'string' ? args.symbol.trim() : '';
+            if (symbol.length === 0) {
+                return makeTextResult(false, `Params 'symbol' cannot be empty.`);
+            }
+            let depth: number;
+            try {
+                depth = readPositiveInt(args.depth, 2, 6, 'depth');
+            } catch (err) {
+                const error = err instanceof Error ? err : new Error(String(err));
+                return makeTextResult(false, error.message);
+            }
+            let stats: BuildStatistics;
+            try {
+                stats = readBuildStatistics(prj);
+            } catch (err) {
+                const error = err instanceof Error ? err : new Error(String(err));
+                return makeJsonResult({ available: false, reason: error.message });
+            }
+            return makeJsonResult(queryCallgraph(stats.callgraph, symbol, depth));
         }
         default:
             return makeTextResult(false, `Unknown tool: ${tool}`);

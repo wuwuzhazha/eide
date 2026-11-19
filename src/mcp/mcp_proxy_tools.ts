@@ -53,7 +53,7 @@ export function createMcpServer(delegateToolCall: ToolDelegate): McpServer {
         'eide_build',
         {
             title: 'Build Project',
-            description: 'Build your eide project.',
+            description: 'Build your eide project. Returns JSON: success, stage, compiler problems (file/line/column/severity/code), memory usage, and logTail on failure.',
             inputSchema: { uid: uidSchema }
         },
         async (args) => delegateToolCall('eide_build', args)
@@ -63,7 +63,7 @@ export function createMcpServer(delegateToolCall: ToolDelegate): McpServer {
         'eide_rebuild',
         {
             title: 'Rebuild Project',
-            description: 'Rebuild your eide project.',
+            description: 'Rebuild your eide project. Returns JSON: success, stage, compiler problems (file/line/column/severity/code), memory usage, and logTail on failure.',
             inputSchema: { uid: uidSchema }
         },
         async (args) => delegateToolCall('eide_rebuild', args)
@@ -266,6 +266,37 @@ export function createMcpServer(delegateToolCall: ToolDelegate): McpServer {
             }
         },
         async (args) => delegateToolCall('eide_set_builder_opts', args)
+    );
+
+    server.registerTool(
+        'eide_get_stack_usage',
+        {
+            title: 'Get Stack Usage',
+            description: 'Get per-function stack frame usage from the last successful build, sorted from largest to smallest. Requires the project to be built with -fstack-usage.',
+            inputSchema: {
+                uid: uidSchema,
+                topN: z.number().int().min(1).max(500).optional().describe(
+                    'Maximum number of functions to return (default: 20).'
+                )
+            }
+        },
+        async (args) => delegateToolCall('eide_get_stack_usage', args)
+    );
+
+    server.registerTool(
+        'eide_query_callgraph',
+        {
+            title: 'Query Callgraph',
+            description: 'Query callers and callees of a symbol from the last successful build. Requires the project to be built with -fcallgraph-info.',
+            inputSchema: {
+                uid: uidSchema,
+                symbol: z.string().min(1).describe('Function/symbol name to query.'),
+                depth: z.number().int().min(1).max(6).optional().describe(
+                    'Traversal depth in each direction (default: 2).'
+                )
+            }
+        },
+        async (args) => delegateToolCall('eide_query_callgraph', args)
     );
 
     return server;

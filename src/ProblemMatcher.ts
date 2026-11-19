@@ -92,9 +92,10 @@ function newVscFileRange(line: number, start: number, len: number): vscode.Range
     if (len < 0)
         len = 0;
     const _line = line > 0 ? (line - 1) : 0;
+    const _start = start > 0 ? (start - 1) : 0;
     return new vscode.Range(
-        new vscode.Position(_line, start),
-        new vscode.Position(_line, start + len));
+        new vscode.Position(_line, _start),
+        new vscode.Position(_line, _start + len));
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -104,6 +105,26 @@ export enum EideDiagnosticCode {
 };
 
 export type CompilerDiagnostics = { [path: string]: vscode.Diagnostic[]; }
+
+export function parseCompilerLog(
+    toolchain: string, projApi: ProjectBaseApi, logFile: File): CompilerDiagnostics {
+    switch (toolchain) {
+        case 'IAR_ARM':
+        case 'IAR_STM8':
+            return parseIarCompilerLog(projApi, logFile);
+        case 'Keil_C51':
+            return parseKeilc51CompilerLog(projApi, logFile);
+        case 'AC5':
+            return parseArmccCompilerLog(projApi, logFile);
+        case 'SDCC':
+        case 'GNU_SDCC_MCS51':
+            return parseSdccCompilerLog(projApi, logFile);
+        case 'COSMIC_STM8':
+            return parseCosmicStm8CompilerLog(projApi, logFile);
+        default:
+            return parseGccCompilerLog(projApi, logFile);
+    }
+}
 
 export function parseArmccCompilerLog(projApi: ProjectBaseApi, logFile: File): CompilerDiagnostics {
 

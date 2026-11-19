@@ -135,9 +135,8 @@ import {
 } from 'vscode-cpptools';
 import * as eclipseParser from './EclipseProjectParser';
 import {
-    parseIarCompilerLog, 
-    CompilerDiagnostics, parseGccCompilerLog, parseArmccCompilerLog, 
-    parseKeilc51CompilerLog, parseSdccCompilerLog, parseCosmicStm8CompilerLog, 
+    parseCompilerLog,
+    CompilerDiagnostics,
     EideDiagnosticCode
 } from './ProblemMatcher';
 import * as iarParser from './IarProjectParser';
@@ -4066,30 +4065,7 @@ export class ProjectExplorer implements CustomConfigurationProvider {
         const logFile = File.from(prj.getOutputFolder().path, 'compiler.log');
 
         try {
-
-            switch (prj.getToolchain().name) {
-                case 'IAR_ARM':
-                case 'IAR_STM8':
-                    diag_res = parseIarCompilerLog(prj, logFile);
-                    break;
-                case 'Keil_C51':
-                    diag_res = parseKeilc51CompilerLog(prj, logFile);
-                    break;
-                case 'AC5':
-                    diag_res = parseArmccCompilerLog(prj, logFile);
-                    break;
-                case 'SDCC':
-                case 'GNU_SDCC_MCS51':
-                    diag_res = parseSdccCompilerLog(prj, logFile);
-                    break;
-                case 'COSMIC_STM8':
-                    diag_res = parseCosmicStm8CompilerLog(prj, logFile);
-                    break;
-                default:
-                    diag_res = parseGccCompilerLog(prj, logFile);
-                    break;
-            }
-
+            diag_res = parseCompilerLog(prj.getToolchain().name, prj, logFile);
         } catch (error) {
             GlobalEvent.log_warn(error);
         }

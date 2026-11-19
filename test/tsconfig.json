@@ -12,6 +12,8 @@
 		"useUnknownInCatchVariables": false,
     },
     "include": [
+        "../src/BuildReport.ts",
+        "../src/BuildStatistics.ts",
         "../src/ClangdConfig.ts",
         "../src/DotnetRuntime.ts",
         "../src/GccCallgraphParser.ts",
