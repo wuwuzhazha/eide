@@ -1,0 +1,79 @@
+# EIDE MCP Skill
+
+The `eide-mcp-tools` skill teaches an AI agent to operate EIDE Pro projects
+through MCP: VS Code HTTP MCP, headless stdio MCP, build/flash configuration,
+stack/callgraph queries, and GDB debugging.
+
+## Download
+
+- Direct file:
+  https://raw.githubusercontent.com/wuwuzhazha/eide/dev/docs/skills/eide-mcp-tools/SKILL.md
+- Release archive:
+  https://github.com/wuwuzhazha/eide/releases/download/v4.0.0/eide-mcp-tools-skill.zip
+- Repository clone:
+  `git clone --depth 1 -b dev https://github.com/wuwuzhazha/eide.git`
+
+## Install
+
+The directory name must be `eide-mcp-tools`; the skill frontmatter name matches
+it.
+
+### ZCode
+
+User scope:
+
+```bash
+mkdir -p ~/.agents/skills/eide-mcp-tools
+curl -fsSL https://raw.githubusercontent.com/wuwuzhazha/eide/dev/docs/skills/eide-mcp-tools/SKILL.md \
+  -o ~/.agents/skills/eide-mcp-tools/SKILL.md
+```
+
+Project scope:
+
+```bash
+mkdir -p .agents/skills/eide-mcp-tools
+curl -fsSL https://raw.githubusercontent.com/wuwuzhazha/eide/dev/docs/skills/eide-mcp-tools/SKILL.md \
+  -o .agents/skills/eide-mcp-tools/SKILL.md
+```
+
+### Claude Code
+
+```bash
+mkdir -p ~/.claude/skills/eide-mcp-tools
+curl -fsSL https://raw.githubusercontent.com/wuwuzhazha/eide/dev/docs/skills/eide-mcp-tools/SKILL.md \
+  -o ~/.claude/skills/eide-mcp-tools/SKILL.md
+```
+
+### Windows PowerShell
+
+```powershell
+New-Item -ItemType Directory -Force "$HOME\.agents\skills\eide-mcp-tools" | Out-Null
+Invoke-WebRequest `
+  -Uri "https://raw.githubusercontent.com/wuwuzhazha/eide/dev/docs/skills/eide-mcp-tools/SKILL.md" `
+  -OutFile "$HOME\.agents\skills\eide-mcp-tools\SKILL.md"
+```
+
+### Release archive
+
+Download `eide-mcp-tools-skill.zip`, extract it into the agent's skills
+directory so the result is `<skills-dir>/eide-mcp-tools/SKILL.md`, then restart
+or reload the agent session.
+
+## Verify
+
+```bash
+head -5 ~/.agents/skills/eide-mcp-tools/SKILL.md
+```
+
+Expected frontmatter:
+
+```yaml
+---
+name: eide-mcp-tools
+description: >-
+  Operate EIDE Pro embedded MCU projects through MCP tools...
+---
+```
+
+The skill is documentation for agents. It is not required for EIDE Pro itself
+and is not bundled into the VSIX.

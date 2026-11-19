@@ -39,7 +39,7 @@
 * 内置 C/C++ 插件的 `C/C++ IntelliSense Provider`，**无需配置** `c_cpp_properties.json` 即可获得源码跳转，补全提示功能。
 * 内置 Msys Unix Shell 环境，方便执行 shell 命令或脚本
 * 内置 Callgraph 调用图可视化工具（仅限gcc编译器）
-* 支持 VS Code MCP 与 Headless CLI/MCP 工作流，详见 [EIDE MCP skill](./docs/skills/eide-mcp-tools/SKILL.md)。
+* 支持 VS Code MCP 与 Headless CLI/MCP 工作流，安装与使用详见 [EIDE MCP skill](./docs/skills/README.md)。
 
 ***
 
