@@ -102,7 +102,12 @@ class HeadlessToolRunner {
 
     resolveProject(uid: string | null | undefined): HeadlessProject {
         if (this.projects.size === 1) {
-            return Array.from(this.projects.values())[0];
+            const project = Array.from(this.projects.values())[0];
+            const projectUid = project.getUid();
+            if (uid && projectUid && projectUid !== uid) {
+                throw new Error(`Not such project (uid=${uid}).`);
+            }
+            return project;
         }
         if (!uid) {
             throw new Error("Params 'uid' cannot be empty.");

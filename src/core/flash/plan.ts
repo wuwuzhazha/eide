@@ -141,21 +141,48 @@ function executableFor(
 
 function jlinkInterface(value: unknown): JLinkInterface {
     switch (value) {
-        case 0:
-        case 'JTAG':
-            return 'JTAG';
+        case undefined:
+        case null:
+        case '':
         case 1:
+        case '1':
         case 'SWD':
             return 'SWD';
+        case 0:
+        case '0':
+        case 'JTAG':
+            return 'JTAG';
         case 3:
+        case '3':
         case 'FINE':
             return 'FINE';
         case 7:
+        case '7':
         case 'cJTAG':
             return 'cJTAG';
         default:
-            return 'SWD';
+            throw new Error(`Invalid JLink interface: ${String(value)}`);
     }
+}
+
+function stlinkProtocol(value: unknown): STLinkProtocol {
+    if (value === undefined || value === null || value === '' || value === 'SWD') {
+        return 'SWD';
+    }
+    if (value === 'JTAG') {
+        return 'JTAG';
+    }
+    throw new Error(`Invalid STLink protocol: ${String(value)}`);
+}
+
+function probeProtocol(value: unknown): ProbeRSProtocol {
+    if (value === undefined || value === null || value === '' || value === 'swd') {
+        return 'swd';
+    }
+    if (value === 'jtag') {
+        return 'jtag';
+    }
+    throw new Error(`Invalid probe-rs protocol: ${String(value)}`);
 }
 
 function parseInteger(value: unknown): number | undefined {
@@ -261,7 +288,7 @@ function buildRequest(
                 options: {
                     executable,
                     variant: stlinkVariant(executable),
-                    protocol: (config.proType === 'JTAG' ? 'JTAG' : 'SWD') as STLinkProtocol,
+                    protocol: stlinkProtocol(config.proType),
                     frequencyKhz: parseInteger(config.speed) ?? DEFAULT_STLINK_FREQUENCY_KHZ,
                     resetMode: typeof config.resetMode === 'string' ? config.resetMode : 'default',
                     runAfterProgram: config.runAfterProgram !== false,
@@ -278,7 +305,7 @@ function buildRequest(
                 options: {
                     executable,
                     chip: String(config.target || ''),
-                    protocol: (config.protocol === 'jtag' ? 'jtag' : 'swd') as ProbeRSProtocol,
+                    protocol: probeProtocol(config.protocol),
                     speedKhz: parseInteger(config.speed) || undefined,
                     workDir: snapshot.projectPath,
                     extraArgs: splitCommandLine(String(config.otherOptions || ''))

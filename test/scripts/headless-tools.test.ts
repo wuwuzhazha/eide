@@ -145,7 +145,10 @@ async function run(): Promise<void> {
         runner: new FakeRunner()
     });
 
-    let result = await execute('eide_get_targets', { uid: 'project-uid' });
+    let result = await execute('eide_get_targets', { uid: 'wrong-uid' });
+    assert(result.isError === true, 'headless: mismatched uid is rejected');
+
+    result = await execute('eide_get_targets', { uid: 'project-uid' });
     let data = parse(result);
     assert(data.actived === 'Debug' && data.targets.join('|') === 'Debug|Release',
         'headless: get targets');

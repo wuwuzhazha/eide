@@ -75,6 +75,21 @@ try {
     assert(jlinkPlan.command.script.contents.includes('loadfile'), 'flash plan: JLink script');
     assert(jlinkPlan.command.verify === true, 'flash plan: JLink verifies');
 
+    const badJlink = writeProject('bad-jlink', 'JLink', {
+        bin: '',
+        cpuInfo: { cpuName: 'test-device', vendor: 'ST' },
+        proType: 99,
+        speed: 8000,
+        otherCmds: ''
+    });
+    let badInterface = false;
+    try {
+        plan(badJlink, { flasherExecutable: 'C:/tools/JLink.exe' });
+    } catch {
+        badInterface = true;
+    }
+    assert(badInterface, 'flash plan: JLink rejects invalid interface');
+
     let missingExe = false;
     try {
         plan(jlink, {});
