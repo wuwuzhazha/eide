@@ -15,6 +15,7 @@ export interface ProjectSnapshot {
     outDir: string;
     srcDirs: string[];
     includeDirs: string[];
+    libDirs: string[];
     defines: string[];
     excludeList: string[];
     toolchainConfig: { [key: string]: any };
@@ -22,6 +23,7 @@ export interface ProjectSnapshot {
     virtualFolder?: any;
     packDir?: string;
     deviceName?: string;
+    hasDependencies: boolean;
 }
 
 function readVersion(value: unknown): string {
@@ -130,12 +132,14 @@ export function loadProjectSnapshot(projectPath: string, target?: string): Proje
         outDir: String(config.outDir || 'build'),
         srcDirs,
         includeDirs: asStringArray(cpp.incList, 'cppPreprocessAttrs.incList'),
+        libDirs: asStringArray(cpp.libList, 'cppPreprocessAttrs.libList'),
         defines: asStringArray(cpp.defineList, 'cppPreprocessAttrs.defineList'),
         excludeList: asStringArray(targetConfig.excludeList, 'excludeList'),
         toolchainConfig,
         toolchainOptions: toolchainConfig.options || {},
         virtualFolder: config.virtualFolder,
         packDir: config.packDir || undefined,
-        deviceName: config.deviceName || undefined
+        deviceName: config.deviceName || undefined,
+        hasDependencies: Array.isArray(config.dependenceList) && config.dependenceList.length > 0
     };
 }
