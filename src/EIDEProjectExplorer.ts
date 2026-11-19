@@ -3659,8 +3659,8 @@ export class ProjectExplorer implements CustomConfigurationProvider {
             }
         }
         if (reloaded) {
-            vscode.window.setStatusBarMessage(
-                view_str$prompt$config_reload_done.replace('{}', prj.getProjectName()), 5000);
+            vscode.window.showInformationMessage(
+                view_str$prompt$config_reload_done.replace('{}', prj.getProjectName()));
         }
     }
 
