@@ -87,7 +87,7 @@ function makeBuildResult(prj: AbstractProject, success: boolean, message: string
     }
     const report = {
         success,
-        stage: detectBuildStage(logText, success, problems),
+        stage: detectBuildStage(logText, success),
         problems,
         memory: parseMemoryUsage(logText),
         ...(success ? {} : { logTail: makeLogTail(message) }),

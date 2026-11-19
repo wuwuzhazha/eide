@@ -89,17 +89,21 @@ export function parseMemoryUsage(logText: string): { [region: string]: MemoryReg
     return result;
 }
 
-export function detectBuildStage(
-    logText: string, success: boolean, problems: BuildProblem[]): BuildStage {
+function sectionBody(logText: string, marker: string): string {
+    const start = logText.indexOf(marker);
+    if (start === -1) {
+        return '';
+    }
+    const bodyStart = start + marker.length;
+    const next = logText.indexOf('>>>', bodyStart);
+    return logText.slice(bodyStart, next === -1 ? undefined : next).trim();
+}
+
+export function detectBuildStage(logText: string, success: boolean): BuildStage {
     if (success) {
         return 'link';
     }
-    if (problems.some(p => p.severity === 'error')) {
-        return 'compile';
-    }
-    const linkStart = logText.lastIndexOf('>>> ld');
-    const compileStart = logText.lastIndexOf('>>> cc');
-    return linkStart !== -1 && linkStart > compileStart ? 'link' : 'compile';
+    return sectionBody(logText, '>>> ld').length > 0 ? 'link' : 'compile';
 }
 
 export function makeLogTail(message: string, maxLines = 120): string {

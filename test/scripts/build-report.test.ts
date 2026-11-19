@@ -40,15 +40,16 @@ const lastTable = parseMemoryUsage(memoryLog + '\n' + secondTable);
 assert(lastTable.FLASH.used === 2048 && lastTable.RAM === undefined,
     'memory: last table wins');
 
-assert(detectBuildStage('>>> cc\n>>> ld\n', true, []) === 'link',
+assert(detectBuildStage('>>> cc\n>>> ld\n', true) === 'link',
     'stage: success is link');
-assert(detectBuildStage('>>> cc\nerror\n', false, []) === 'compile',
+assert(detectBuildStage('>>> cc\nerror\n', false) === 'compile',
     'stage: failure before ld is compile');
-assert(detectBuildStage('>>> cc\n>>> ld\nundefined reference\n', false, []) === 'link',
+assert(detectBuildStage('>>> cc\n>>> ld\nundefined reference\n', false) === 'link',
     'stage: failure after ld is link');
-assert(detectBuildStage('>>> cc\n>>> ld\n', false, [{
-    file: 'a.c', line: 1, column: 1, severity: 'error', message: 'bad'
-}]) === 'compile', 'stage: compile error wins over later ld marker');
+assert(detectBuildStage('>>> cc\n>>> ld\n', false) === 'compile',
+    'stage: empty link section stays at compile');
+assert(detectBuildStage('>>> cc\n>>> ld\n\n>>> postbuild', false) === 'compile',
+    'stage: postbuild marker does not look like linker output');
 
 const problems = toBuildProblems({
     'C:/demo/src/main.c': [
