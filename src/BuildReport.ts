@@ -1,13 +1,6 @@
-export type BuildProblemSeverity = 'error' | 'warning' | 'info' | 'hint';
+import type { BuildProblem, BuildProblemSeverity } from './core/problems';
 
-export interface BuildProblem {
-    file: string;
-    line: number;
-    column: number;
-    severity: BuildProblemSeverity;
-    code?: string;
-    message: string;
-}
+export type { BuildProblem, BuildProblemSeverity } from './core/problems';
 
 export interface MemoryRegionUsage {
     used: number;
