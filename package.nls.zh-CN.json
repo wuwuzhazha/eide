@@ -179,7 +179,7 @@
     "string.eide.start_project": "开始你的项目",
     "string.eide.start_project.detail": "现在，我们可以创建一个项目 ！\n[新建项目](command:eide.operation.new_project)\n或者导入其他IDE的项目 ！\n[导入项目](command:eide.operation.import_project)",
     "string.eide.open_docs": "了解更多",
-    "string.eide.open_docs.detail": "点击链接可以打开项目主页，也许能帮您了解到更多的用法。\n[EIDE Pro](https://github.com/wuwuzhazha/eide)",
+    "string.eide.open_docs.detail": "点击链接可以打开项目主页，也许能帮您了解到更多的用法。\n[EIDE Pro](https://github.com/wuwuzhazha/eide-pro)",
 
     "string.eide.project.welcome": "该工作区中没有任何项目！\n[打开项目](command:eide.operation.open_project)\n[新建项目](command:eide.operation.new_project)\n[导入项目](command:eide.operation.import_project)"
 }

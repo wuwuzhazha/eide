@@ -7,11 +7,11 @@ stack/callgraph queries, and GDB debugging.
 ## Download
 
 - Direct file:
-  https://raw.githubusercontent.com/wuwuzhazha/eide/dev/docs/skills/eide-mcp-tools/SKILL.md
+  https://raw.githubusercontent.com/wuwuzhazha/eide-pro/dev/docs/skills/eide-mcp-tools/SKILL.md
 - Release archive:
-  https://github.com/wuwuzhazha/eide/releases/download/v4.0.0/eide-mcp-tools-skill.zip
+  https://github.com/wuwuzhazha/eide-pro/releases/download/v4.0.0/eide-mcp-tools-skill.zip
 - Repository clone:
-  `git clone --depth 1 -b dev https://github.com/wuwuzhazha/eide.git`
+  `git clone --depth 1 -b dev https://github.com/wuwuzhazha/eide-pro.git`
 
 ## Install
 
@@ -24,7 +24,7 @@ User scope:
 
 ```bash
 mkdir -p ~/.agents/skills/eide-mcp-tools
-curl -fsSL https://raw.githubusercontent.com/wuwuzhazha/eide/dev/docs/skills/eide-mcp-tools/SKILL.md \
+curl -fsSL https://raw.githubusercontent.com/wuwuzhazha/eide-pro/dev/docs/skills/eide-mcp-tools/SKILL.md \
   -o ~/.agents/skills/eide-mcp-tools/SKILL.md
 ```
 
@@ -32,7 +32,7 @@ Project scope:
 
 ```bash
 mkdir -p .agents/skills/eide-mcp-tools
-curl -fsSL https://raw.githubusercontent.com/wuwuzhazha/eide/dev/docs/skills/eide-mcp-tools/SKILL.md \
+curl -fsSL https://raw.githubusercontent.com/wuwuzhazha/eide-pro/dev/docs/skills/eide-mcp-tools/SKILL.md \
   -o .agents/skills/eide-mcp-tools/SKILL.md
 ```
 
@@ -40,7 +40,7 @@ curl -fsSL https://raw.githubusercontent.com/wuwuzhazha/eide/dev/docs/skills/eid
 
 ```bash
 mkdir -p ~/.claude/skills/eide-mcp-tools
-curl -fsSL https://raw.githubusercontent.com/wuwuzhazha/eide/dev/docs/skills/eide-mcp-tools/SKILL.md \
+curl -fsSL https://raw.githubusercontent.com/wuwuzhazha/eide-pro/dev/docs/skills/eide-mcp-tools/SKILL.md \
   -o ~/.claude/skills/eide-mcp-tools/SKILL.md
 ```
 
@@ -49,7 +49,7 @@ curl -fsSL https://raw.githubusercontent.com/wuwuzhazha/eide/dev/docs/skills/eid
 ```powershell
 New-Item -ItemType Directory -Force "$HOME\.agents\skills\eide-mcp-tools" | Out-Null
 Invoke-WebRequest `
-  -Uri "https://raw.githubusercontent.com/wuwuzhazha/eide/dev/docs/skills/eide-mcp-tools/SKILL.md" `
+  -Uri "https://raw.githubusercontent.com/wuwuzhazha/eide-pro/dev/docs/skills/eide-mcp-tools/SKILL.md" `
   -OutFile "$HOME\.agents\skills\eide-mcp-tools\SKILL.md"
 ```
 

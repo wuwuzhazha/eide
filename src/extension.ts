@@ -371,7 +371,7 @@ function postLaunchHook(extensionCtx: vscode.ExtensionContext) {
             const msg = view_str$prompt$feedback;
             vscode.window.showInformationMessage(msg, rating_text, sponsor_author_text).then((ans) => {
                 if (ans == rating_text) {
-                    utility.openUrl(`https://github.com/wuwuzhazha/eide/issues`);
+                    utility.openUrl(`https://github.com/wuwuzhazha/eide-pro/issues`);
                 }
                 if (ans == sponsor_author_text) {
                     // https://em-ide.com/sponsor

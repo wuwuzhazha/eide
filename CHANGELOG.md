@@ -12,6 +12,9 @@ All notable version changes will be recorded in this file.
   - Rewrote the EIDE MCP skill for both VS Code HTTP MCP and headless stdio MCP, including debug tools, overrides, build results, and troubleshooting.
   - Added skill download/install instructions and a release archive (`eide-mcp-tools-skill.zip`).
 
+**Changes**:
+  - Renamed the GitHub repository to `wuwuzhazha/eide-pro` and set `dev` as the default branch.
+
 ***
 
 ### [v4.0.0]

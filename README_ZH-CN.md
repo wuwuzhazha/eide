@@ -1,11 +1,11 @@
 # EIDE Pro
 
 > [github0null/eide](https://github.com/github0null/eide) 的非官方分支，由
-> [wuwuzhazha/eide](https://github.com/wuwuzhazha/eide) 维护。新增与 VS Code
+> [wuwuzhazha/eide-pro](https://github.com/wuwuzhazha/eide-pro) 维护。新增与 VS Code
 > 构建行为一致的 Headless CLI/MCP 编译、烧录和调试能力。
 
-[![](https://img.shields.io/badge/仓库-wuwuzhazha%2Feide-blue)](https://github.com/wuwuzhazha/eide)
-[![](https://img.shields.io/badge/发布-GitHub-green)](https://github.com/wuwuzhazha/eide/releases)
+[![](https://img.shields.io/badge/仓库-wuwuzhazha%2Feide-pro-blue)](https://github.com/wuwuzhazha/eide-pro)
+[![](https://img.shields.io/badge/发布-GitHub-green)](https://github.com/wuwuzhazha/eide-pro/releases)
 
 ***
 
@@ -69,7 +69,7 @@
 
 反馈途径: 
 
-- [Github Issue](https://github.com/wuwuzhazha/eide/issues)
+- [Github Issue](https://github.com/wuwuzhazha/eide-pro/issues)
 
 - [论坛: https://discuss.em-ide.com](https://discuss.em-ide.com/)
 

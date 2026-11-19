@@ -179,7 +179,7 @@
     "string.eide.start_project": "Start Your Project",
     "string.eide.start_project.detail": "Now, We can create a project !\n[Create Project](command:eide.operation.new_project)\nor import a project !\n[Import Project](command:eide.operation.import_project)",
     "string.eide.open_docs": "Learn More",
-    "string.eide.open_docs.detail": "Click the link will open the project page that may help you learn more about usage.\n[EIDE Pro](https://github.com/wuwuzhazha/eide)",
+    "string.eide.open_docs.detail": "Click the link will open the project page that may help you learn more about usage.\n[EIDE Pro](https://github.com/wuwuzhazha/eide-pro)",
 
     "string.eide.project.welcome": "No eide projects in this workspace !\n[Open Project](command:eide.operation.open_project)\n[New Project](command:eide.operation.new_project)\n[Import Project](command:eide.operation.import_project)"
 }

@@ -1,11 +1,11 @@
 # EIDE Pro
 
 > Unofficial fork of [github0null/eide](https://github.com/github0null/eide),
-> maintained at [wuwuzhazha/eide](https://github.com/wuwuzhazha/eide). Adds
+> maintained at [wuwuzhazha/eide-pro](https://github.com/wuwuzhazha/eide-pro). Adds
 > headless CLI/MCP build, flash, and debug with full VS Code build parity.
 
-[![](https://img.shields.io/badge/repo-wuwuzhazha%2Feide-blue)](https://github.com/wuwuzhazha/eide)
-[![](https://img.shields.io/badge/releases-GitHub-green)](https://github.com/wuwuzhazha/eide/releases)
+[![](https://img.shields.io/badge/repo-wuwuzhazha%2Feide-pro-blue)](https://github.com/wuwuzhazha/eide-pro)
+[![](https://img.shields.io/badge/releases-GitHub-green)](https://github.com/wuwuzhazha/eide-pro/releases)
 
 ***
 
@@ -93,7 +93,7 @@ Supported Platforms:
 
 ## Community 🌈
 
-- [Github](https://github.com/wuwuzhazha/eide/issues)
+- [Github](https://github.com/wuwuzhazha/eide-pro/issues)
 
 - [Forum https://discuss.em-ide.com](https://discuss.em-ide.com/)
 

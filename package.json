@@ -36,7 +36,7 @@
         "mcp",
         "cli"
     ],
-    "homepage": "https://github.com/wuwuzhazha/eide",
+    "homepage": "https://github.com/wuwuzhazha/eide-pro",
     "license": "MIT",
     "description": "EIDE Pro: embedded IDE with headless CLI/MCP for 8051/STM8/Cortex-M/MIPS/RISC-V",
     "version": "4.0.0",
@@ -65,13 +65,13 @@
 		"eide-cli": "./dist/eide_cli.js",
 		"eide-mcp": "./dist/eide_mcp.js"
 	},
-    "readme": "https://github.com/wuwuzhazha/eide#readme",
+    "readme": "https://github.com/wuwuzhazha/eide-pro#readme",
     "bugs": {
-        "url": "https://github.com/wuwuzhazha/eide/issues",
+        "url": "https://github.com/wuwuzhazha/eide-pro/issues",
         "email": "github0null@outlook.com"
     },
     "repository": {
-        "url": "https://github.com/wuwuzhazha/eide.git",
+        "url": "https://github.com/wuwuzhazha/eide-pro.git",
         "type": "git"
     },
     "scripts": {
