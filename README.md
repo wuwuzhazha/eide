@@ -1,10 +1,11 @@
-# Embedded IDE
+# EIDE Pro
 
-[![](https://img.shields.io/badge/home_page-em--ide.com-blue)](https://em-ide.com/)
-[![](https://img.shields.io/badge/chat-discuss.em--ide.com-orange)](https://discuss.em-ide.com/)
-[![](https://img.shields.io/visual-studio-marketplace/v/CL.eide)](https://marketplace.visualstudio.com/items?itemName=CL.eide)
-[![](https://img.shields.io/visual-studio-marketplace/i/CL.eide)](https://marketplace.visualstudio.com/items?itemName=CL.eide)
-[![](https://img.shields.io/visual-studio-marketplace/stars/CL.eide)](https://marketplace.visualstudio.com/items?itemName=CL.eide&ssr=false#review-details)
+> Unofficial fork of [github0null/eide](https://github.com/github0null/eide),
+> maintained at [wuwuzhazha/eide](https://github.com/wuwuzhazha/eide). Adds
+> headless CLI/MCP build, flash, and debug with full VS Code build parity.
+
+[![](https://img.shields.io/badge/repo-wuwuzhazha%2Feide-blue)](https://github.com/wuwuzhazha/eide)
+[![](https://img.shields.io/badge/releases-GitHub-green)](https://github.com/wuwuzhazha/eide/releases)
 
 ***
 
@@ -86,13 +87,13 @@ Supported Platforms:
 
 ## ChangeLog 📌
 
-[ChangeLog](https://marketplace.visualstudio.com/items/CL.eide/changelog)
+[ChangeLog](./CHANGELOG.md)
 
 ***
 
 ## Community 🌈
 
-- [Github](https://github.com/github0null/eide/issues)
+- [Github](https://github.com/wuwuzhazha/eide/issues)
 
 - [Forum https://discuss.em-ide.com](https://discuss.em-ide.com/)
 

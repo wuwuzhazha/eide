@@ -28,3 +28,10 @@ assert(duplicateIds.length === 0, `command ids are unique (duplicates: ${duplica
 
 const untitled = pkg.contributes.commands.filter((command: any) => !command.title);
 assert(untitled.length === 0, `every command has a title (missing: ${untitled.map((c: any) => c.command).join(', ') || 'none'})`);
+
+const { EXTENSION_ID, EXTENSION_DISPLAY_NAME } =
+    require('../../../src/ExtensionInfo') as any;
+assert(`${pkg.publisher}.${pkg.name}` === EXTENSION_ID,
+    `package identity matches extension id '${EXTENSION_ID}'`);
+assert(pkg.displayName === EXTENSION_DISPLAY_NAME,
+    `display name matches '${EXTENSION_DISPLAY_NAME}'`);

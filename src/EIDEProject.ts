@@ -86,6 +86,7 @@ import { EventData, CurrentDevice, ArmBaseCompileConfigModel, ArmBaseCompileData
 import * as FileLock from '../lib/node-utility/FileLock';
 import { CompilerCommandsDatabaseItem, CodeBuilder } from './CodeBuilder';
 import { xpackRequireDevTools } from './XpackDevTools';
+import { EXTENSION_DISPLAY_NAME, EXTENSION_ID, LEGACY_EXTENSION_IDS } from './ExtensionInfo';
 
 export class CheckError extends Error {
 }
@@ -871,12 +872,14 @@ export abstract class AbstractProject implements CustomConfigurationProvider, Pr
 
     private lock_handle: number | undefined;
 
+    protected headless: boolean = false;
+
     //-----------------------------------------------------------
     //- cpptools provider interface
     //-----------------------------------------------------------
 
-    name: string = 'eide';
-    extensionId: string = 'cl.eide';
+    name: string = EXTENSION_DISPLAY_NAME;
+    extensionId: string = EXTENSION_ID;
     abstract canProvideConfiguration(uri: vscode.Uri, token?: vscode.CancellationToken | undefined): Thenable<boolean>;
     abstract provideConfigurations(uris: vscode.Uri[], token?: vscode.CancellationToken | undefined): Thenable<SourceFileConfigurationItem[]>;
     abstract canProvideBrowseConfiguration(token?: vscode.CancellationToken | undefined): Thenable<boolean>;
@@ -1441,6 +1444,16 @@ export abstract class AbstractProject implements CustomConfigurationProvider, Pr
         return this.GetRootDir().ToRelativePath(path.trim());
     }
 
+    private async loadProjectState(wsFile: File, createWorkspaceFile: boolean): Promise<void> {
+        await this.BeforeLoad(wsFile);
+        this.LoadConfigurations(wsFile, createWorkspaceFile);
+        this.loadProjectDirectory();
+        this.initProjectConfig();
+        this.loadToolchain();
+        this.loadUploader();
+        this.initProjectComponents();
+    }
+
     async Load(wsFile: File) {
 
         this.lock_handle = FileLock.lock([os.tmpdir(), `${md5(wsFile.path)}.lock`].join(NodePath.sep));
@@ -1449,16 +1462,34 @@ export abstract class AbstractProject implements CustomConfigurationProvider, Pr
         }
 
         try {
-            await this.BeforeLoad(wsFile);
-            this.LoadConfigurations(wsFile);
-            this.loadProjectDirectory();
-            this.initProjectConfig();
-            this.loadToolchain();
-            this.loadUploader();
-            this.initProjectComponents();
+            await this.loadProjectState(wsFile, true);
             this.RegisterEvent();
             this.LoadSourceRootFolders();
             await this.AfterLoad();
+        } catch (error) {
+            if (this.lock_handle)
+                FileLock.unlock(this.lock_handle);
+            throw error;
+        }
+    }
+
+    async LoadForHeadless(wsFile: File): Promise<void> {
+
+        this.headless = true;
+        this.lock_handle = FileLock.lock([os.tmpdir(), `${md5(wsFile.path)}.lock`].join(NodePath.sep));
+        if (this.lock_handle == undefined) {
+            throw new Error(view_str$prompt$project_is_opened_by_another.replace('{path}', wsFile.path));
+        }
+
+        try {
+            await this.loadProjectState(wsFile, false);
+            this.sourceRoots.load(true);
+            this.virtualSource.load(true);
+            this.GetConfiguration().config.srcDirs =
+                this.getSourceRootFolders().map(folder => folder.fileWatcher.file.path);
+            this.dependenceManager.Refresh(true);
+            this.getUid();
+            this.GetConfiguration().BuildIn_RemoveAllDefines();
         } catch (error) {
             if (this.lock_handle)
                 FileLock.unlock(this.lock_handle);
@@ -2962,7 +2993,7 @@ $(OUT_DIR):
         }
     }
 
-    protected LoadConfigurations(wsFile: File) {
+    protected LoadConfigurations(wsFile: File, createWorkspaceFile = true) {
 
         ////////////////////////////////////
         // init project
@@ -2972,7 +3003,9 @@ $(OUT_DIR):
         this.eideDir = new File(this.rootDir.path + File.sep + AbstractProject.EIDE_DIR);
 
         // init cfgs
-        this.configMap.Set(new WorkspaceConfiguration(wsFile).load(), AbstractProject.workspaceSuffix);
+        this.configMap.Set(
+            new WorkspaceConfiguration(wsFile).load(createWorkspaceFile),
+            AbstractProject.workspaceSuffix);
         const eideJsonFile = File.from(wsFile.dir, AbstractProject.EIDE_DIR, AbstractProject.prjConfigName);
         this.configMap.Set(new ProjectConfiguration(eideJsonFile, this.workspaceState).load());
 
@@ -3092,10 +3125,16 @@ $(OUT_DIR):
                 dep.groupName != ProjectConfiguration.BUILD_IN_GROUP_NAME &&
                 dep.groupName != ProjectConfiguration.CUSTOM_GROUP_NAME);
             if (conf.packDir && dep_idx != -1) {
-                const sel = await vscode.window.showWarningMessage(
-                    `${WARNING}: ${view_str$prompt$chipPkgNotCompateThisVersion}`, continue_text, cancel_text);
-                if (sel !== continue_text) {
-                    throw Error(view_str$prompt$userCanceledOperation);
+                if (this.headless) {
+                    GlobalEvent.log_warn(
+                        `${WARNING}: ${view_str$prompt$chipPkgNotCompateThisVersion}`);
+                } else {
+                    const sel = await vscode.window.showWarningMessage(
+                        `${WARNING}: ${view_str$prompt$chipPkgNotCompateThisVersion}`,
+                        continue_text, cancel_text);
+                    if (sel !== continue_text) {
+                        throw Error(view_str$prompt$userCanceledOperation);
+                    }
                 }
             }
         }
@@ -3334,6 +3373,12 @@ $(OUT_DIR):
                 }
             } catch (error) {
                 GlobalEvent.log_warn(<Error>error);
+                if (this.headless) {
+                    throw new Error(
+                        `${toolchain.getToolchainPrefix()}gcc is not available from xpack: ` +
+                        `${(<Error>error).message}\n` +
+                        `Run 'xpm install' in the project directory.`);
+                }
                 const msg = [
                     `${toolchain.getToolchainPrefix()}gcc not avaliable:\n${(<Error>error).message}`,
                     `Please check your package.json and run 'xpm install' to install xpack dependences.`
@@ -3353,6 +3398,11 @@ $(OUT_DIR):
 
         if (!toolchainManager.isToolchainPathReady(toolchain.name)) {
             const dir = toolchainManager.getToolchainExecutableFolder(toolchain.name);
+            if (this.headless) {
+                throw new Error(
+                    `Toolchain '${toolchain.name}' is not installed or its path is not configured` +
+                    (dir ? `: ${dir.path}` : '.'));
+            }
             let tooldisplayname: string = toolchain.name;
             if (isGccFamilyToolchain(toolchain.name) && toolchain.getToolchainPrefix)
                 tooldisplayname = `${toolchain.getToolchainPrefix()}gcc`;
@@ -4027,7 +4077,8 @@ class EIDEProject extends AbstractProject {
                 settings['files.autoGuessEncoding'] = true;
             }
 
-            if (settings['C_Cpp.default.configurationProvider'] === undefined) {
+            if (settings['C_Cpp.default.configurationProvider'] === undefined
+                || LEGACY_EXTENSION_IDS.includes(settings['C_Cpp.default.configurationProvider'])) {
                 settings['C_Cpp.default.configurationProvider'] = this.extensionId;
             }
 
@@ -4145,7 +4196,7 @@ class EIDEProject extends AbstractProject {
             // add extension recommendation
             {
                 let recommendExt: string[] = [
-                    "cl.eide",
+                    EXTENSION_ID,
                     "keroc.hex-fmt",
                     "xiaoyongdong.srecord",
                     "hars.cppsnippets",
@@ -4234,8 +4285,11 @@ class EIDEProject extends AbstractProject {
                         const cfg = jsonc.parse(cfgFile.Read());
                         if (Array.isArray(cfg['configurations'])) {
                             const idx = cfg['configurations'].findIndex((item) => item['name'] == os.platform());
-                            if (idx != -1 && cfg['configurations'][idx].configurationProvider == this.extensionId) {
-                                fs.unlinkSync(cfgFile.path);
+                            if (idx != -1) {
+                                const provider = cfg['configurations'][idx].configurationProvider;
+                                if (provider == this.extensionId || LEGACY_EXTENSION_IDS.includes(provider)) {
+                                    fs.unlinkSync(cfgFile.path);
+                                }
                             }
                         }
                     }
@@ -4292,8 +4346,8 @@ class EIDEProject extends AbstractProject {
 
     ////////////////////////////////// cpptools intellisence provider ///////////////////////////////////
 
-    name: string = 'eide';
-    extensionId: string = 'cl.eide';
+    name: string = EXTENSION_DISPLAY_NAME;
+    extensionId: string = EXTENSION_ID;
 
     // virtual source path list (!! must be real absolute path !!)
     //      key: fsPath

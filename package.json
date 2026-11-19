@@ -1,7 +1,7 @@
 {
-    "name": "eide",
-    "displayName": "Embedded IDE",
-    "publisher": "cl",
+    "name": "eide-pro",
+    "displayName": "EIDE Pro",
+    "publisher": "wuwuzhazha",
     "author": {
         "name": "cl",
         "url": "https://github.com/github0null",
@@ -31,12 +31,15 @@
         "cosmic",
         "mips-mti",
         "llvm",
-        "clang"
+        "clang",
+        "headless",
+        "mcp",
+        "cli"
     ],
-    "homepage": "https://em-ide.com",
+    "homepage": "https://github.com/wuwuzhazha/eide",
     "license": "MIT",
-    "description": "A mcu development environment for 8051/AVR/STM8/Cortex-M/MIPS/RISC-V",
-    "version": "3.27.2",
+    "description": "EIDE Pro: embedded IDE with headless CLI/MCP for 8051/STM8/Cortex-M/MIPS/RISC-V",
+    "version": "4.0.0",
     "preview": false,
     "engines": {
         "vscode": "^1.89.0"
@@ -62,13 +65,13 @@
 		"eide-cli": "./dist/eide_cli.js",
 		"eide-mcp": "./dist/eide_mcp.js"
 	},
-    "readme": "https://github.com/github0null/eide/blob/master/README.md",
+    "readme": "https://github.com/wuwuzhazha/eide#readme",
     "bugs": {
-        "url": "https://github.com/github0null/eide/issues",
+        "url": "https://github.com/wuwuzhazha/eide/issues",
         "email": "github0null@outlook.com"
     },
     "repository": {
-        "url": "https://github.com/github0null/eide.git",
+        "url": "https://github.com/wuwuzhazha/eide.git",
         "type": "git"
     },
     "scripts": {
@@ -194,7 +197,7 @@
         ],
         "configuration": [
             {
-                "title": "Embedded IDE",
+                "title": "EIDE Pro",
                 "properties": {
                     "EIDE.MCP.Server.Enable": {
                         "type": "boolean",

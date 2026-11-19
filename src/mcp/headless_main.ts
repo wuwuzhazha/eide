@@ -14,8 +14,10 @@ const usage = [
     'Options:',
     '  -p, --project <dir>       Project root (repeatable)',
     '  -t, --target <name>       Active build target',
-    '      --resources <dir>     EIDE resources directory (contains data/models and tools)',
-    '      --toolchain-path <dir> Toolchain installation directory',
+    '      --resources <dir>     EIDE resources directory (the extension res folder)',
+    '      --extension-root <dir> Extension root (default: parent of --resources)',
+    '      --toolchain-path <dir> Toolchain installation directory (optional with xpack)',
+    '      --settings <file>     JSON file with EIDE.* settings overrides',
     '      --schema-dir <dir>    Builder options JSON schema directory (default: <resources>/../lang)',
     '      --flasher-exe <path>  Flash tool executable',
     '      --gdb <path>          GDB executable (default: arm-none-eabi-gdb)',
@@ -51,8 +53,10 @@ interface ServerArguments {
     projectPaths: string[];
     target?: string;
     resourcesDir: string;
-    toolchainPath: string;
+    extensionRoot?: string;
+    toolchainPath?: string;
     schemaDir: string;
+    settingsFile?: string;
     flasherExecutable?: string;
     gdbPath?: string;
     buildTimeoutMs: number;
@@ -63,7 +67,9 @@ function parseArguments(argv: string[]): ServerArguments | undefined {
     const projectPaths: string[] = [];
     let target: string | undefined;
     let resourcesDir: string | undefined;
+    let extensionRoot: string | undefined;
     let toolchainPath: string | undefined;
+    let settingsFile: string | undefined;
     let schemaDir: string | undefined;
     let flasherExecutable: string | undefined;
     let gdbPath: string | undefined;
@@ -90,8 +96,16 @@ function parseArguments(argv: string[]): ServerArguments | undefined {
                 resourcesDir = readValue(argv, i, arg);
                 i++;
                 break;
+            case '--extension-root':
+                extensionRoot = readValue(argv, i, arg);
+                i++;
+                break;
             case '--toolchain-path':
                 toolchainPath = readValue(argv, i, arg);
+                i++;
+                break;
+            case '--settings':
+                settingsFile = readValue(argv, i, arg);
                 i++;
                 break;
             case '--schema-dir':
@@ -125,15 +139,14 @@ function parseArguments(argv: string[]): ServerArguments | undefined {
     if (!resourcesDir) {
         throw new UsageError("Missing required option: '--resources'.");
     }
-    if (!toolchainPath) {
-        throw new UsageError("Missing required option: '--toolchain-path'.");
-    }
     return {
         projectPaths,
         target,
         resourcesDir,
+        extensionRoot,
         toolchainPath,
         schemaDir: schemaDir ?? NodePath.resolve(resourcesDir, '..', 'lang'),
+        settingsFile,
         flasherExecutable,
         gdbPath,
         buildTimeoutMs,

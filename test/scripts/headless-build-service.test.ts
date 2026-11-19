@@ -2,7 +2,7 @@ const fs = require('fs');
 const os = require('os');
 const NodePath = require('path');
 const yaml = require('yaml');
-const { HeadlessBuildService } = require('../../../src/core/build_service') as any;
+const { EideBuildService } = require('../../../src/headless/build_service') as any;
 const { ProcessTimeoutError } = require('../../../src/core/process_runner') as any;
 
 function assert(cond: boolean, msg: string): void {
@@ -18,7 +18,7 @@ function write(path: string, content = ''): void {
     fs.writeFileSync(path, content);
 }
 
-const root = NodePath.join(os.tmpdir(), `eide-build-service-${process.pid}-${Date.now()}`);
+const root = NodePath.join(os.tmpdir(), `eide-headless-service-${process.pid}-${Date.now()}`);
 const exe = process.platform === 'win32' ? '.exe' : '';
 const outDir = NodePath.join(root, 'build', 'Debug');
 
@@ -30,6 +30,7 @@ function projectConfig(): any {
         srcDirs: ['src'],
         outDir: 'build',
         dependenceList: [],
+        miscInfo: { uid: 'headless-service-uid' },
         targets: {
             Debug: {
                 toolchain: 'GCC',
@@ -39,13 +40,12 @@ function projectConfig(): any {
                         floatingPointHardware: 'default',
                         archExtensions: '',
                         scatterFilePath: 'link.ld',
-                        useCustomScatterFile: true,
                         options: {
                             version: 5,
-                            'c/cpp-compiler': { C_FLAGS: '-Wall', CXX_FLAGS: '', optimization: 'level-debug' },
+                            'c/cpp-compiler': { C_FLAGS: '-Wall', CXX_FLAGS: '' },
                             'asm-compiler': { ASM_FLAGS: '' },
-                            global: { 'output-debug-info': 'enable' },
-                            linker: { LD_FLAGS: '', LIB_FLAGS: '-lm', 'output-format': 'elf' }
+                            global: {},
+                            linker: { LD_FLAGS: '', LIB_FLAGS: '' }
                         }
                     }
                 },
@@ -66,20 +66,23 @@ class FakeRunner {
     }
 }
 
-async function main(): Promise<void> {
+async function run(): Promise<void> {
     write(NodePath.join(root, 'src', 'main.c'), 'int main(void) { return 0; }');
     write(NodePath.join(root, '.eide', 'eide.yml'), yaml.stringify(projectConfig()));
     write(NodePath.join(root, 'link.ld'));
-    const resources = NodePath.join(root, 'resources');
-    write(NodePath.join(resources, 'data', 'models', 'arm.gcc.model.json'), '{}');
-    if (process.platform === 'win32') {
-        write(NodePath.join(resources, 'tools', 'win32', 'unify_builder', 'unify_builder.exe'));
-    } else if (process.platform === 'linux') {
-        write(NodePath.join(resources, 'tools', 'linux', 'unify_builder', 'unify_builder'));
-    } else {
-        const arch = process.arch === 'arm64' ? 'arm64' : 'x86_64';
-        write(NodePath.join(resources, 'tools', 'darwin', 'unify_builder', arch, 'unify_builder'));
-    }
+    write(NodePath.join(root, 'package.json'), JSON.stringify({
+        name: 'eide', version: 'test', contributes: { configuration: [] }
+    }));
+    const resources = NodePath.join(root, 'res');
+    fs.cpSync(NodePath.join(process.cwd(), 'res', 'data', 'models'),
+        NodePath.join(resources, 'data', 'models'), { recursive: true });
+    const toolsDir = process.platform === 'win32'
+        ? NodePath.join(resources, 'tools', 'win32')
+        : process.platform === 'linux'
+            ? NodePath.join(resources, 'tools', 'linux')
+            : NodePath.join(resources, 'tools', 'darwin');
+    write(NodePath.join(toolsDir, '7z', `7za${exe}`));
+    write(NodePath.join(toolsDir, 'unify_builder', `unify_builder${exe}`));
     const toolchain = NodePath.join(root, 'toolchain');
     write(NodePath.join(toolchain, 'bin', `arm-none-eabi-gcc${exe}`));
 
@@ -93,7 +96,7 @@ async function main(): Promise<void> {
         '             RAM:        567 B        20 KB      2.77%'
     ].join('\n');
 
-    const successService = new HeadlessBuildService({
+    const successService = new EideBuildService({
         resourcesDir: resources,
         toolchainPath: toolchain,
         runner: new FakeRunner(args => {
@@ -123,19 +126,20 @@ async function main(): Promise<void> {
     assert(result.artifacts.length === 1 && result.artifacts[0].endsWith('demo.elf'),
         'service: artifacts');
     assert(result.compileCommands.endsWith('compile_commands.json'),
-        'service: compile commands for IntelliSense');
+        'service: compile commands');
     assert(result.effectiveConfig.cFlags === '-Wall -O2', 'service: effective config');
-    assert(fs.existsSync(NodePath.join(outDir, 'build-manifest.json')), 'service: manifest written');
+    assert(fs.existsSync(NodePath.join(outDir, 'build-manifest.json')), 'service: manifest');
     assert(result.logTail === undefined, 'service: no log tail on success');
 
     const failureLog = [
         '>>> cc',
         'src/main.c:7:3: error: expected expression before end of input'
     ].join('\n');
-    const failureService = new HeadlessBuildService({
+    const failureService = new EideBuildService({
         resourcesDir: resources,
         toolchainPath: toolchain,
         runner: new FakeRunner(() => {
+            fs.mkdirSync(outDir, { recursive: true });
             fs.writeFileSync(NodePath.join(outDir, 'compiler.log'), failureLog);
             return { code: 1, stdout: '', stderr: 'build failed' };
         }),
@@ -147,7 +151,7 @@ async function main(): Promise<void> {
     assert(failed.problems[0].severity === 'error', 'service: parses error');
     assert(failed.logTail.includes('expected expression'), 'service: log tail');
 
-    const timeoutService = new HeadlessBuildService({
+    const timeoutService = new EideBuildService({
         resourcesDir: resources,
         toolchainPath: toolchain,
         runner: new FakeRunner(() => {
@@ -166,7 +170,7 @@ async function main(): Promise<void> {
     assert(cleanedAgain.success === true && cleanedAgain.message.includes('does not exist'),
         'service: clean is idempotent');
 
-    fs.writeFileSync(NodePath.join(root, 'demo.code-workspace'), '{}');
+    write(NodePath.join(root, 'demo.code-workspace'), '{}');
     const workspacePlan = await successService.plan({
         projectPath: root,
         workspaceFile: NodePath.join(root, 'demo.code-workspace')
@@ -174,9 +178,9 @@ async function main(): Promise<void> {
     assert(workspacePlan.outDir === outDir, 'service: accepts code-workspace path');
 }
 
-main()
+run()
     .then(() => {
-        console.log('All build service tests passed.');
+        console.log('All headless build service tests passed.');
     })
     .catch(error => {
         console.error(error);

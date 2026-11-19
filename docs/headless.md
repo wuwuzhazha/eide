@@ -1,11 +1,17 @@
 # Headless CLI and MCP
 
-EIDE can build, flash, and debug ARM GCC projects without a running VS Code instance.
+EIDE can build, flash, and debug projects without a running VS Code instance. The
+headless host loads the same `.eide/eide.yml` project model and generates build
+parameters with the same `CodeBuilder` used by the extension, so build behavior
+matches VS Code: all project types, all registered toolchains, `.eide/env.ini`,
+virtual source folders, dependency groups, per-file options, and builder
+settings are supported.
 
 ## Requirements
 
 - Node.js 18+
-- EIDE resources directory (`res`) and an ARM GCC toolchain
+- EIDE resources directory (`res`) and the toolchain configured for the target
+- A project initialized by EIDE (`miscInfo.uid` is present in `.eide/eide.yml`)
 - `--project` points at the directory containing `.eide/eide.yml`
 
 ## CLI
@@ -72,15 +78,30 @@ Options:
 | `--include`, `--lib` | Extra include/library directory (repeatable) |
 | `--cflag`, `--cxxflag`, `--asmflag`, `--ldflag` | Extra compiler/linker flags (repeatable) |
 | `--resources <dir>` | EIDE `res` directory (required for build/plan) |
-| `--toolchain-path <dir>` | Toolchain root, containing `bin/arm-none-eabi-gcc` |
+| `--extension-root <dir>` | Extension root containing `package.json` and `res` (default: parent of `--resources`) |
+| `--settings <file>` | JSON file with `EIDE.*` settings overrides, merged after `.code-workspace` settings |
+| `--toolchain-path <dir>` | Toolchain installation directory (see below) |
 | `--timeout <ms>` | Operation timeout (build 30 min, flash 2 min by default) |
-| `--threads <n>` | Build worker threads (default 4) |
+| `--threads <n>` | Build worker threads (default: EIDE setting) |
 | `--flasher-exe <path>` | Flash tool executable; required for JLink/OpenOCD/STLink |
 | `--erase-all` | Chip erase instead of programming |
 | `--verify`, `--no-verify` | Force or skip verification where the tool allows it |
 | `--artifact <path[,addr]>` | Override the programmed artifact |
 
 All commands print one JSON object to stdout. Logs go to stderr.
+
+`--toolchain-path` is mapped to the toolchain's normal `EIDE.*` install setting:
+the toolchain root for most compilers (the executable folder is derived as
+`bin`, `stm8/bin`, or the folder itself for COSMIC STM8), and the `TOOLS.INI`
+or `uv4.exe` path for Keil C51. Use `--settings` to set any toolchain setting
+explicitly instead.
+
+```json
+{
+  "EIDE.ARM.GCC.InstallDirectory": "/opt/gcc-arm-none-eabi",
+  "EIDE.Builder.ThreadNumber": 8
+}
+```
 
 Exit codes:
 
@@ -101,6 +122,28 @@ The repository builds standalone entry scripts at `dist/eide_cli.js` and
 `dist/eide_mcp.js` (`npm run webpack:headless`). Use `node dist/eide_cli.js`
 and `node dist/eide_mcp.js` when running from a packaged extension. The MCP
 bundle resolves `x2js` from the extension's `node_modules`.
+
+## Build parity
+
+`eide-cli plan/build` and the MCP `eide_build`/`eide_rebuild` tools reuse the
+extension's project loader and builder:
+
+- `.eide/env.ini` variables are applied to defines, include paths, and the
+  builder environment, including target-specific sections.
+- Virtual source folders and physical source roots are scanned together.
+- `dependenceList` groups (custom and installed package groups) contribute
+  include paths, libraries, and defines.
+- `.eide/files.options.yml` per-file compiler options and
+  `alwaysBuildSourceFiles` are passed to the builder.
+- `.code-workspace` `settings` and the `--settings` file provide `EIDE.*`
+  settings; `--settings` takes precedence and `--threads` overrides the
+  configured thread count.
+- GCC-family toolchains installed through xpack are resolved from the
+  project `package.json` and `xpacks/` directory like in VS Code.
+- Dynamic `overrides` for defines, include/library paths, compiler/linker
+  flags, builder options, source filters, and environment variables are
+  applied to the generated `builder.params`; a non-empty override set forces
+  a rebuild.
 
 ## MCP server (stdio)
 
@@ -152,8 +195,6 @@ Tool calls are serialized. A debug session stays active until
 
 ## Limits
 
-- Headless builds currently support ARM GCC projects without package
-  dependencies, virtual source files, or `.eide/env.ini`.
 - Flash support covers JLink, OpenOCD, pyOCD, STLink, and probe-rs.
   STVP, stcgal, and custom command uploaders fail explicitly.
 - `eide_debug_svd_lookup` supports the SVD subset implemented in

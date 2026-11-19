@@ -60,6 +60,7 @@ import { WorkspaceManager } from './WorkspaceManager';
 import { VirtualDocument } from './VirtualDocsProvider';
 import * as utility from './utility';
 import * as platform from './Platform';
+import { EXTENSION_ID } from './ExtensionInfo';
 
 const extension_deps: string[] = [];
 
@@ -74,7 +75,7 @@ export async function activate(context: vscode.ExtensionContext) {
     RegisterGlobalEvent();
     RegisterMsgListener();
 
-    GlobalEvent.log_info('Embedded IDE launch begin');
+    GlobalEvent.log_info('EIDE Pro launch begin');
 
     // init platform
     try {
@@ -149,7 +150,7 @@ export async function activate(context: vscode.ExtensionContext) {
     subscriptions.push(vscode.commands.registerCommand('_cl.eide.Operation.Import', () => operationExplorer.OnImportProject()));
     subscriptions.push(vscode.commands.registerCommand('_cl.eide.Operation.SetToolchainPath', () => operationExplorer.OnSetToolchainPath()));
     subscriptions.push(vscode.commands.registerCommand('_cl.eide.Operation.SetupUtilTools', () => operationExplorer.setupUtilTools()));
-    subscriptions.push(vscode.commands.registerCommand('_cl.eide.Operation.openSettings', () => SettingManager.jumpToSettings('@ext:cl.eide')));
+    subscriptions.push(vscode.commands.registerCommand('_cl.eide.Operation.openSettings', () => SettingManager.jumpToSettings(`@ext:${EXTENSION_ID}`)));
     subscriptions.push(vscode.commands.registerCommand('_cl.eide.Operation.onlineHelp', () => utility.openUrl('https://discuss.em-ide.com')));
 
     // operations user cmds
@@ -319,7 +320,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
     // launch done
     GlobalEvent.emit('extension_launch_done');
-    GlobalEvent.log_info('Embedded IDE launch done');
+    GlobalEvent.log_info('EIDE Pro launch done');
 }
 
 // this method is called when your extension is deactivated
@@ -370,7 +371,7 @@ function postLaunchHook(extensionCtx: vscode.ExtensionContext) {
             const msg = view_str$prompt$feedback;
             vscode.window.showInformationMessage(msg, rating_text, sponsor_author_text).then((ans) => {
                 if (ans == rating_text) {
-                    utility.openUrl(`https://marketplace.visualstudio.com/items?itemName=CL.eide&ssr=false#review-details`);
+                    utility.openUrl(`https://github.com/wuwuzhazha/eide/issues`);
                 }
                 if (ans == sponsor_author_text) {
                     // https://em-ide.com/sponsor

@@ -252,3 +252,23 @@ export function parseCosmicStm8Problems(logText: string): ParsedProblem[] {
     }
     return problems;
 }
+
+export function parseToolchainProblems(
+    toolchain: string, logText: string): ParsedProblem[] {
+    switch (toolchain) {
+        case 'IAR_ARM':
+        case 'IAR_STM8':
+            return parseIarProblems(logText, toolchain);
+        case 'Keil_C51':
+            return parseKeilc51Problems(logText);
+        case 'AC5':
+            return parseArmccProblems(logText);
+        case 'SDCC':
+        case 'GNU_SDCC_MCS51':
+            return parseSdccProblems(logText);
+        case 'COSMIC_STM8':
+            return parseCosmicStm8Problems(logText);
+        default:
+            return parseGccProblems(logText, toolchain);
+    }
+}

@@ -153,3 +153,7 @@ export function loadProjectSnapshot(projectPath: string, target?: string): Proje
         hasDependencies: Array.isArray(config.dependenceList) && config.dependenceList.length > 0
     };
 }
+
+export function resolveOutputDir(snapshot: ProjectSnapshot): string {
+    return NodePath.resolve(snapshot.projectPath, snapshot.outDir, snapshot.target);
+}

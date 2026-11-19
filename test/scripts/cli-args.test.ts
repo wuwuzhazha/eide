@@ -66,6 +66,7 @@ const rebuild = parseCliArgs(['rebuild', '--project', 'E:/demo']);
 assert(rebuild.options.mode === 'rebuild', 'args: rebuild command sets mode');
 assert(rebuild.options.dryRun === false, 'args: rebuild is not dry run');
 assert(rebuild.options.timeoutMs === 1800000, 'args: default timeout');
+assert(rebuild.options.threads === undefined, 'args: threads default to EIDE settings');
 
 const plan = parseCliArgs(['plan', '--project', 'E:/demo']);
 assert(plan.options.dryRun === true, 'args: plan defaults to dry run');

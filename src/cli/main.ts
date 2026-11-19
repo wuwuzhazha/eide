@@ -1,5 +1,6 @@
 #!/usr/bin/env node
-import { BuildExecutionError, cleanProject, HeadlessBuildService } from '../core/build_service';
+import { BuildExecutionError, cleanProject } from '../core/build_service';
+import { EideBuildService } from '../headless/build_service';
 import { createFlashPlan } from '../core/flash/plan';
 import { ProcessFlashService } from '../core/flash/service';
 import { StderrLogger } from '../core/logger';
@@ -104,12 +105,14 @@ export async function main(argv: string[], io: CliIo = processIo): Promise<numbe
             return result.code === 'not_supported' || result.code === 'invalid_request' ? 3 : 2;
         }
 
-        const service = new HeadlessBuildService({
+        const service = new EideBuildService({
             resourcesDir: requireOption(options.resourcesDir, '--resources'),
-            toolchainPath: requireOption(options.toolchainPath, '--toolchain-path'),
+            extensionRoot: options.extensionRoot,
+            toolchainPath: options.toolchainPath,
+            settingsFile: options.settingsFile,
+            builderThreads: options.threads,
             runner: new NodeProcessRunner(),
             timeoutMs: options.timeoutMs,
-            threadNum: options.threads,
             logger: new StderrLogger()
         });
         const request = toRequest(options);

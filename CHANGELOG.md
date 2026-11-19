@@ -6,6 +6,19 @@ All notable version changes will be recorded in this file.
 
 ***
 
+### [v4.0.0]
+
+**New**:
+  - `Headless CLI/MCP`: Build plans and builds now reuse `EIDEProject` and `CodeBuilder`, matching VS Code for `.eide/env.ini`, virtual source folders, `dependenceList`, per-file options, workspace settings, and dynamic overrides.
+  - `Toolchains`: Headless mode supports every registered project type and toolchain, including xpack-managed GCC toolchains.
+  - `Settings`: Add `--extension-root` and `--settings` options to the headless CLI and MCP server.
+
+**Changes**:
+  - Extension identity is now `wuwuzhazha.eide-pro` (`EIDE Pro`).
+  - Removed the obsolete simplified headless planner and its tests.
+
+***
+
 ### [v3.27.2] revision
 
 **Fix**:

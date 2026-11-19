@@ -36,6 +36,7 @@ import { File } from '../lib/node-utility/File';
 import { ResManager } from './ResManager';
 import { GlobalEvent } from './GlobalEvents';
 import { AbstractProject, CheckError, DataChangeType, VirtualSource, SourceFileOptions, EIDE_FILE_OPTION_VERSION } from './EIDEProject';
+import { EXTENSION_DISPLAY_NAME, EXTENSION_ID } from './ExtensionInfo';
 import { ToolchainName, ToolchainManager } from './ToolchainManager';
 import {
     BuilderOptions,
@@ -3267,9 +3268,9 @@ export class ProjectExplorer implements CustomConfigurationProvider {
     //  cpptools intellisense provider
     // -----------------------------------------
 
-    name: string = 'eide';
+    name: string = EXTENSION_DISPLAY_NAME;
 
-    extensionId: string = 'cl.eide';
+    extensionId: string = EXTENSION_ID;
 
     private isRegisteredCpptoolsProvider: boolean = false;
 

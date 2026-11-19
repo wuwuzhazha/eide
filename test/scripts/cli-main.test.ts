@@ -39,6 +39,7 @@ function projectConfig(type: string, toolchain: string): any {
         srcDirs: ['src'],
         outDir: 'build',
         dependenceList: [],
+        miscInfo: { uid: 'cli-main-uid' },
         targets: {
             Debug: {
                 toolchain,
@@ -80,8 +81,18 @@ async function run(): Promise<void> {
     write(NodePath.join(root, 'src', 'main.c'), 'int main(void) { return 0; }');
     write(NodePath.join(root, '.eide', 'eide.yml'), yaml.stringify(projectConfig('ARM', 'GCC')));
     write(NodePath.join(root, 'link.ld'));
-    const resources = NodePath.join(root, 'resources');
-    write(NodePath.join(resources, 'data', 'models', 'arm.gcc.model.json'), '{}');
+    write(NodePath.join(root, 'package.json'), JSON.stringify({
+        name: 'eide', version: 'test', contributes: { configuration: [] }
+    }));
+    const resources = NodePath.join(root, 'res');
+    const toolsDir = process.platform === 'win32'
+        ? NodePath.join(resources, 'tools', 'win32')
+        : process.platform === 'linux'
+            ? NodePath.join(resources, 'tools', 'linux')
+            : NodePath.join(resources, 'tools', 'darwin');
+    write(NodePath.join(toolsDir, '7z', `7za${exe}`));
+    fs.cpSync(NodePath.join(process.cwd(), 'res', 'data', 'models'),
+        NodePath.join(resources, 'data', 'models'), { recursive: true });
     if (process.platform === 'win32') {
         write(NodePath.join(resources, 'tools', 'win32', 'unify_builder', 'unify_builder.exe'));
     } else if (process.platform === 'linux') {
@@ -141,9 +152,9 @@ async function run(): Promise<void> {
     text = io();
     code = await main(['plan', '--project', wrongRoot, '--resources', resources,
         '--toolchain-path', toolchain], text);
-    const failed = JSON.parse(text.out());
-    assert(code === 3 && failed.success === false && failed.error.message.includes('ARM GCC'),
-        'cli: unsupported toolchain fails explicitly');
+    const alt = JSON.parse(text.out());
+    assert(code === 0 && alt.success === true && alt.params.toolchain === 'AC6',
+        'cli: alternate toolchain plan');
 }
 
 run()

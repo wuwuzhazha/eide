@@ -299,11 +299,11 @@ export abstract class Configuration<ConfigType = any, EventType = any> {
         this.config = this.GetDefault(this.readTypeFromFile(configFile) || type);
     }
 
-    public load(): Configuration<ConfigType, EventType> {
+    public load(createIfMissing = true): Configuration<ConfigType, EventType> {
 
         if (this.cfgFile.IsFile()) {
             this.loadConfig(this.cfgFile.Read());
-        } else {
+        } else if (createIfMissing) {
             this.Save(true);
         }
 

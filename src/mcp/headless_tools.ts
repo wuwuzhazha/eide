@@ -2,7 +2,8 @@ import { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import * as fs from 'fs';
 import * as NodePath from 'path';
 import { BuildStatistics, queryCallgraph, summarizeStackUsage } from '../BuildStatistics';
-import { HeadlessBuildService } from '../core/build_service';
+import { cleanProject } from '../core/build_service';
+import { EideBuildService } from '../headless/build_service';
 import { validateBuilderOptionsAgainstSchema } from '../core/builder_options';
 import { validateBuildOverrides } from '../core/build_overrides';
 import { createFlashPlan } from '../core/flash/plan';
@@ -18,8 +19,11 @@ export interface HeadlessToolOptions {
     projectPaths: string[];
     target?: string;
     resourcesDir: string;
-    toolchainPath: string;
+    extensionRoot?: string;
+    toolchainPath?: string;
     schemaDir: string;
+    settingsFile?: string;
+    builderThreads?: number;
     flasherExecutable?: string;
     buildTimeoutMs: number;
     flashTimeoutMs: number;
@@ -86,8 +90,19 @@ function readBuildStatistics(project: HeadlessProject): BuildStatistics {
 class HeadlessToolRunner {
     private readonly projects = new Map<string, HeadlessProject>();
     private readonly debug: HeadlessDebugSession;
+    private readonly builder: EideBuildService;
 
     constructor(private readonly options: HeadlessToolOptions) {
+        this.builder = new EideBuildService({
+            resourcesDir: options.resourcesDir,
+            extensionRoot: options.extensionRoot,
+            toolchainPath: options.toolchainPath,
+            settingsFile: options.settingsFile,
+            builderThreads: options.builderThreads,
+            runner: options.runner,
+            timeoutMs: options.buildTimeoutMs,
+            logger: options.logger
+        });
         for (const projectPath of options.projectPaths) {
             const absolute = NodePath.resolve(projectPath);
             this.projects.set(absolute, new HeadlessProject(absolute, options.target));
@@ -120,16 +135,6 @@ class HeadlessToolRunner {
         throw new Error(`Not such project (uid=${uid}).`);
     }
 
-    private buildService(project: HeadlessProject): HeadlessBuildService {
-        return new HeadlessBuildService({
-            resourcesDir: this.options.resourcesDir,
-            toolchainPath: this.options.toolchainPath,
-            runner: this.options.runner,
-            timeoutMs: this.options.buildTimeoutMs,
-            logger: this.options.logger
-        });
-    }
-
     async execute(tool: string, args: Record<string, unknown>): Promise<CallToolResult> {
         const uid = args.uid as string | null | undefined;
         const project = this.resolveProject(uid);
@@ -148,9 +153,8 @@ class HeadlessToolRunner {
                     mode: tool === 'eide_rebuild' ? 'rebuild' as const : undefined,
                     overrides
                 };
-                const service = this.buildService(project);
                 if (args.dryRun === true) {
-                    const plan = await service.plan(request);
+                    const plan = await this.builder.plan(request);
                     return makeJsonResult({
                         success: true,
                         dryRun: true,
@@ -162,12 +166,11 @@ class HeadlessToolRunner {
                         params: plan.params
                     });
                 }
-                const result = await service.build(request);
+                const result = await this.builder.build(request);
                 return makeJsonResult(result, !result.success);
             }
             case 'eide_clean': {
-                const service = this.buildService(project);
-                const result = await service.clean({
+                const result = cleanProject({
                     projectPath: project.projectPath,
                     target: project.getTargetName()
                 });

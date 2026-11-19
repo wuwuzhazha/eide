@@ -18,7 +18,10 @@ module.exports = {
         libraryTarget: 'commonjs2'
     },
     resolve: {
-        extensions: ['.ts', '.js']
+        extensions: ['.ts', '.js'],
+        alias: {
+            vscode$: path.resolve(__dirname, 'src/headless/vscode_api.ts')
+        }
     },
     externals: {
         x2js: 'commonjs2 x2js'

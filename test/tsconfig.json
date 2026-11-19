@@ -16,6 +16,7 @@
         "../src/BuildStatistics.ts",
         "../src/ClangdConfig.ts",
         "../src/DotnetRuntime.ts",
+        "../src/ExtensionInfo.ts",
         "../src/GccCallgraphParser.ts",
         "../src/GccStackUsageParser.ts",
         "../src/ProjectConfigReload.ts",

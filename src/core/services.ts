@@ -1,5 +1,23 @@
-import { BuilderParamsData } from './build_plan';
+import { OverridableBuilderParams } from './build_overrides';
 import { BuildRequest, BuildResult } from './types';
+
+export interface BuilderParamsData extends OverridableBuilderParams {
+    name: string;
+    target: string;
+    toolchain: string;
+    toolchainCfgFile: string;
+    toolchainLocation: string;
+    buildMode: string;
+    showRepathOnLog: boolean;
+    threadNum: number;
+    dumpPath: string;
+    outDir: string;
+    rootDir: string;
+    sourceParams: { [name: string]: string };
+    env: { [name: string]: any };
+    sysPaths: string[];
+    alwaysInBuildSources: string[];
+}
 
 export interface BuildPlan {
     params: BuilderParamsData;

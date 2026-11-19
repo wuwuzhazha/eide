@@ -10,9 +10,11 @@ export interface CliOptions {
     mode?: BuildMode;
     dryRun: boolean;
     timeoutMs: number;
-    threads: number;
+    threads?: number;
     resourcesDir?: string;
+    extensionRoot?: string;
     toolchainPath?: string;
+    settingsFile?: string;
     overrides: BuildOverrides;
     flasherExecutable?: string;
     eraseAll: boolean;
@@ -48,10 +50,12 @@ export const cliHelp = [
     '      --cxxflag <flags>        Append C++ compiler flags (repeatable)',
     '      --asmflag <flags>        Append assembler flags (repeatable)',
     '      --ldflag <flags>         Append linker flags (repeatable)',
-    '      --resources <dir>        EIDE resources directory (tools/models)',
+    '      --resources <dir>        EIDE resources directory (the extension res folder)',
+    '      --extension-root <dir>   Extension root (default: parent of --resources)',
     '      --toolchain-path <dir>   Toolchain installation directory',
+    '      --settings <file>        JSON file with EIDE.* settings overrides',
     '      --timeout <ms>           Operation timeout (default: build 1800000, flash 120000)',
-    '      --threads <n>            Build worker threads (default: 4)',
+    '      --threads <n>            Build worker threads (default: EIDE setting)',
     '      --flasher-exe <path>     Flash tool executable',
     '      --erase-all              Erase the whole chip before flashing',
     '      --verify                 Verify after flashing (default for capable tools)',
@@ -95,9 +99,11 @@ export function parseCliArgs(argv: string[]): ParsedCli {
     let mode: BuildMode | undefined = command === 'rebuild' ? 'rebuild' : undefined;
     let dryRun = command === 'plan';
     let timeoutMs = command === 'flash' ? DEFAULT_FLASH_TIMEOUT_MS : DEFAULT_BUILD_TIMEOUT_MS;
-    let threads = 4;
+    let threads: number | undefined;
     let resourcesDir: string | undefined;
+    let extensionRoot: string | undefined;
     let toolchainPath: string | undefined;
+    let settingsFile: string | undefined;
     let flasherExecutable: string | undefined;
     let eraseAll = false;
     let verify: boolean | undefined;
@@ -169,8 +175,16 @@ export function parseCliArgs(argv: string[]): ParsedCli {
                 resourcesDir = readValue(argv, i, arg);
                 i++;
                 break;
+            case '--extension-root':
+                extensionRoot = readValue(argv, i, arg);
+                i++;
+                break;
             case '--toolchain-path':
                 toolchainPath = readValue(argv, i, arg);
+                i++;
+                break;
+            case '--settings':
+                settingsFile = readValue(argv, i, arg);
                 i++;
                 break;
             case '--timeout': {
@@ -230,7 +244,7 @@ export function parseCliArgs(argv: string[]): ParsedCli {
         if (mode !== undefined) {
             throw new CliUsageError('--mode is not supported for flash.');
         }
-        if (threads !== 4) {
+        if (threads !== undefined) {
             throw new CliUsageError('--threads is not supported for flash.');
         }
         if (Object.keys(overrides).length > 0) {
@@ -253,7 +267,9 @@ export function parseCliArgs(argv: string[]): ParsedCli {
             timeoutMs,
             threads,
             resourcesDir,
+            extensionRoot,
             toolchainPath,
+            settingsFile,
             overrides,
             flasherExecutable,
             eraseAll,

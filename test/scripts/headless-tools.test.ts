@@ -115,9 +115,19 @@ async function run(): Promise<void> {
     write(NodePath.join(root, 'inc', 'demo.h'), '');
     write(NodePath.join(root, '.eide', 'eide.yml'), yaml.stringify(projectConfig()));
     write(NodePath.join(root, 'link.ld'));
+    write(NodePath.join(root, 'package.json'), JSON.stringify({
+        name: 'eide', version: 'test', contributes: { configuration: [] }
+    }));
 
-    const resources = NodePath.join(root, 'resources');
-    write(NodePath.join(resources, 'data', 'models', 'arm.gcc.model.json'), '{}');
+    const resources = NodePath.join(root, 'res');
+    const toolsDir = process.platform === 'win32'
+        ? NodePath.join(resources, 'tools', 'win32')
+        : process.platform === 'linux'
+            ? NodePath.join(resources, 'tools', 'linux')
+            : NodePath.join(resources, 'tools', 'darwin');
+    write(NodePath.join(toolsDir, '7z', `7za${exe}`));
+    fs.cpSync(NodePath.join(process.cwd(), 'res', 'data', 'models'),
+        NodePath.join(resources, 'data', 'models'), { recursive: true });
     if (process.platform === 'win32') {
         write(NodePath.join(resources, 'tools', 'win32', 'unify_builder', 'unify_builder.exe'));
     } else if (process.platform === 'linux') {
