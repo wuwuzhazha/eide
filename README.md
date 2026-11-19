@@ -8,6 +8,7 @@
 
 [![](https://img.shields.io/badge/repo-wuwuzhazha%2Feide-pro-blue)](https://github.com/wuwuzhazha/eide-pro)
 [![](https://img.shields.io/badge/releases-GitHub-green)](https://github.com/wuwuzhazha/eide-pro/releases)
+[![](https://img.shields.io/badge/Open%20VSX-EIDE%20Pro-blue)](https://open-vsx.org/extension/wuwuzhazha/eide-pro)
 
 ***
 
@@ -34,6 +35,19 @@ Supported Platforms:
   - **macOS**(Only tested in 'macOS 10.15 x64')
 
 ![preview](https://docs.em-ide.com/preview.png)
+
+***
+
+## Install
+
+From Open VSX:
+
+```bash
+code --install-extension wuwuzhazha.eide-pro
+```
+
+Or install the latest VSIX from
+[GitHub Releases](https://github.com/wuwuzhazha/eide-pro/releases).
 
 ***
 

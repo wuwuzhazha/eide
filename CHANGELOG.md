@@ -15,6 +15,7 @@ All notable version changes will be recorded in this file.
 **Changes**:
   - Added the EIDE Pro fork copyright to `LICENSE`.
   - Renamed the GitHub repository to `wuwuzhazha/eide-pro` and set `dev` as the default branch.
+  - Published the extension to Open VSX as `wuwuzhazha.eide-pro`.
   - Documented why the fork is not submitted upstream: all changes are AI-produced and touch core paths, so they are maintained independently to avoid upstream review and stability risk.
 
 **Docs**:

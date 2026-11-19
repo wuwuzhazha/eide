@@ -8,6 +8,7 @@
 
 [![](https://img.shields.io/badge/仓库-wuwuzhazha%2Feide-pro-blue)](https://github.com/wuwuzhazha/eide-pro)
 [![](https://img.shields.io/badge/发布-GitHub-green)](https://github.com/wuwuzhazha/eide-pro/releases)
+[![](https://img.shields.io/badge/Open%20VSX-EIDE%20Pro-blue)](https://open-vsx.org/extension/wuwuzhazha/eide-pro)
 
 ***
 
@@ -28,6 +29,18 @@
   - **macOS**（仅在 'macOS 10.15 x64' 中测试过）
 
 ![preview](https://docs.em-ide.com/preview.png)
+
+***
+
+## 安装
+
+从 Open VSX 安装：
+
+```bash
+code --install-extension wuwuzhazha.eide-pro
+```
+
+或从 [GitHub Releases](https://github.com/wuwuzhazha/eide-pro/releases) 下载最新 VSIX。
 
 ***
 
