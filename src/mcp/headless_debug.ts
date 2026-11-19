@@ -159,9 +159,7 @@ export class HeadlessDebugSession {
     }
 
     async fault(args: Record<string, unknown>): Promise<any> {
-        const hasProvided = ['hfsr', 'cfsr', 'mmar', 'bfar']
-            .some(key => args[key] !== undefined);
-        const session = hasProvided ? undefined : this.requireSession();
+        const session = this.session;
         const read = async (name: string): Promise<number> => {
             if (args[name] !== undefined) {
                 return parseAddressValue(args[name], name);
