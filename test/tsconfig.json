@@ -12,6 +12,7 @@
 		"useUnknownInCatchVariables": false,
     },
     "include": [
+        "../src/ClangdConfig.ts",
         "../src/DotnetRuntime.ts",
         "../src/GccCallgraphParser.ts",
         "../src/GccStackUsageParser.ts",
