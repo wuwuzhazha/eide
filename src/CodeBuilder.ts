@@ -50,6 +50,8 @@ import { ArrayDelRepetition } from "../lib/node-utility/Utility";
 import { DependenceManager } from "./DependenceManager";
 import { WorkspaceManager } from "./WorkspaceManager";
 import { ToolchainName } from "./ToolchainManager";
+import { applyBuildOverrides, hasBuildOverrides } from './core/build_overrides';
+import { BuildOverrides } from './core/types';
 import {
     md5, sha256, copyObject, generateDotnetProgramCmd, generateRandomStr,
     isGccFamilyToolchain, compareVersion 
@@ -71,6 +73,8 @@ export interface BuildOptions {
     onlyDumpBuilderParams?: boolean;
 
     otherArgs?: string[];
+
+    overrides?: BuildOverrides;
 }
 
 export interface BuilderParams {
@@ -353,7 +357,7 @@ export abstract class CodeBuilder {
     genBuildCommand(options?: BuildOptions): string | undefined {
 
         // setup build mode
-        this.useFastCompile = options?.notRebuild;
+        this.useFastCompile = options?.notRebuild && !hasBuildOverrides(options?.overrides);
         this.onlyDumpCompilerInfo = options?.onlyDumpCompilerInfo;
         this.otherArgs = options?.otherArgs;
 
@@ -363,12 +367,12 @@ export abstract class CodeBuilder {
 
         // generate command line
         const commandLine = generateDotnetProgramCmd(
-            ResManager.instance().getUnifyBuilderExe(), this.getCommands());
+            ResManager.instance().getUnifyBuilderExe(), this.getCommands(options?.overrides));
 
         return commandLine;
     }
 
-    private getCommands(): string[] {
+    private getCommands(overrides?: BuildOverrides): string[] {
 
         const config = this.project.GetConfiguration().config;
         const settingManager = SettingManager.GetInstance();
@@ -554,7 +558,8 @@ export abstract class CodeBuilder {
         }
 
         // write project build params
-        fs.writeFileSync(paramsPath, JSON.stringify(builderOptions, undefined, 4));
+        fs.writeFileSync(paramsPath,
+            JSON.stringify(applyBuildOverrides(builderOptions, overrides), undefined, 4));
 
         return cmds;
     }

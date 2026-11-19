@@ -3902,6 +3902,23 @@ export class ProjectExplorer implements CustomConfigurationProvider {
     }
 
     private _builderLock: boolean = false;
+
+    async planProject(prj: AbstractProject, options?: BuildOptions): Promise<{ success: boolean; message: string; }> {
+        if (this._builderLock) {
+            return { success: false, message: 'Builder busy ! Please wait !' };
+        }
+        try {
+            this._builderLock = true;
+            const commandLine = CodeBuilder.NewBuilder(prj).genBuildCommand(options);
+            if (!commandLine) {
+                return { success: false, message: 'Error: builder.genBuildCommand return null.' };
+            }
+            return { success: true, message: commandLine };
+        } finally {
+            this._builderLock = false;
+        }
+    }
+
     async buildProject(prj?: AbstractProject, options?: BuildOptions, noTerminal?: boolean): Promise<{ success: boolean; message: string; }> {
 
         if (prj === undefined) {

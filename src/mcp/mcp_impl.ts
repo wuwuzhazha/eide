@@ -26,12 +26,15 @@ import { CallToolResult } from '@modelcontextprotocol/sdk/types';
 import { ProjectExplorer } from '../EIDEProjectExplorer';
 import { AbstractProject } from '../EIDEProject';
 import { BuilderOptions } from '../EIDETypeDefine';
+import { BuildOptions } from '../CodeBuilder';
 import { FlashCommandResult } from '../HexUploader';
 import { loadBuilderOptionsSchema, validateBuilderOptions } from './mcp_builder_opts_validate';
 import { File } from '../../lib/node-utility/File';
 import { parseCompilerLog } from '../ProblemMatcher';
 import { BuildProblem, detectBuildStage, makeLogTail, parseMemoryUsage, toBuildProblems } from '../BuildReport';
 import { BuildStatistics, queryCallgraph, summarizeStackUsage } from '../BuildStatistics';
+import { validateBuildOverrides } from '../core/build_overrides';
+import { BuildOverrides } from '../core/types';
 
 function resolveProject(
     explorer: ProjectExplorer,
@@ -134,9 +137,35 @@ export async function executeTool(
             const prj = resolveProject(explorer, uid);
             if (!prj)
                 return projectNotFound(uid);
-            const res = tool === 'eide_build'
-                ? await explorer.buildProject(prj, { notRebuild: true, otherArgs: ['--no-color'] }, true)
-                : await explorer.buildProject(prj, { otherArgs: ['--no-color'] }, true);
+            const overrides = args.overrides as BuildOverrides | undefined;
+            const overrideError = validateBuildOverrides(overrides);
+            if (overrideError) {
+                return makeTextResult(false, `Invalid overrides: ${overrideError}`);
+            }
+            const options: BuildOptions = {
+                notRebuild: tool === 'eide_build',
+                otherArgs: ['--no-color'],
+                overrides
+            };
+            if (args.dryRun === true) {
+                const planned = await explorer.planProject(prj, options);
+                if (!planned.success) {
+                    return makeTextResult(false, planned.message);
+                }
+                const paramsFile = File.from(prj.getOutputFolder().path, 'builder.params');
+                if (!paramsFile.IsFile()) {
+                    return makeTextResult(false, `Builder params not found: ${paramsFile.path}`);
+                }
+                return makeJsonResult({
+                    success: true,
+                    dryRun: true,
+                    command: planned.message,
+                    outDir: prj.getOutputFolder().path,
+                    paramsFile: paramsFile.path,
+                    params: JSON.parse(paramsFile.Read())
+                });
+            }
+            const res = await explorer.buildProject(prj, options, true);
             if (res.message === 'Builder busy ! Please wait !') {
                 return makeTextResult(false, res.message);
             }

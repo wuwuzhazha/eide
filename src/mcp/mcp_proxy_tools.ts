@@ -49,12 +49,35 @@ export function createMcpServer(delegateToolCall: ToolDelegate): McpServer {
 
     const uidSchema = z.string().describe('Project UID (cannot be empty). You can get it from "<Your workspace>/.eide/eide.yml", property name is "miscInfo.uid"');
 
+    const overridesSchema = z.object({
+        defines: z.array(z.string()).optional().describe('Additional preprocessor defines (NAME or NAME=VALUE).'),
+        includeDirs: z.array(z.string()).optional().describe('Additional include directories.'),
+        libDirs: z.array(z.string()).optional().describe('Additional library directories.'),
+        cFlags: z.string().optional().describe('Extra C compiler flags.'),
+        cxxFlags: z.string().optional().describe('Extra C++ compiler flags.'),
+        asmFlags: z.string().optional().describe('Extra assembler flags.'),
+        ldFlags: z.string().optional().describe('Extra linker flags.'),
+        options: z.record(z.string(), z.unknown()).optional().describe('Deep patch for builder model options.'),
+        source: z.object({
+            include: z.array(z.string()).optional(),
+            exclude: z.array(z.string()).optional()
+        }).optional().describe('Glob filters for the source file list.'),
+        env: z.record(z.string(), z.string()).optional().describe('Extra project environment variables.')
+    }).describe('Per-invocation build parameters. Supplying overrides forces a rebuild.');
+
+    const buildInputSchema = {
+        uid: uidSchema,
+        overrides: overridesSchema.optional(),
+        dryRun: z.boolean().optional().describe(
+            'Generate builder.params and return the command line without executing the build.')
+    };
+
     server.registerTool(
         'eide_build',
         {
             title: 'Build Project',
-            description: 'Build your eide project. Returns JSON: success, stage, compiler problems (file/line/column/severity/code), memory usage, and logTail on failure.',
-            inputSchema: { uid: uidSchema }
+            description: 'Build your eide project with optional dynamic overrides. Returns JSON: success, stage, compiler problems (file/line/column/severity/code), memory usage, and logTail on failure. With dryRun=true it returns the generated builder params and command line.',
+            inputSchema: buildInputSchema
         },
         async (args) => delegateToolCall('eide_build', args)
     );
@@ -63,8 +86,8 @@ export function createMcpServer(delegateToolCall: ToolDelegate): McpServer {
         'eide_rebuild',
         {
             title: 'Rebuild Project',
-            description: 'Rebuild your eide project. Returns JSON: success, stage, compiler problems (file/line/column/severity/code), memory usage, and logTail on failure.',
-            inputSchema: { uid: uidSchema }
+            description: 'Rebuild your eide project with optional dynamic overrides. Returns JSON: success, stage, compiler problems (file/line/column/severity/code), memory usage, and logTail on failure. With dryRun=true it returns the generated builder params and command line.',
+            inputSchema: buildInputSchema
         },
         async (args) => delegateToolCall('eide_rebuild', args)
     );
