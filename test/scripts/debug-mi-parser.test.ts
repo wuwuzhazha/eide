@@ -119,6 +119,17 @@ assertEqual(tokenedAsync.results.reason, 'exited-normally', 'async exit reason')
 const escaped = asStream(parseOne('~"A\\101\\x42\\t\\e"\n'));
 assertEqual(escaped.text, 'AAB\t\u001b', 'octal, hex, tab, and escape decoding');
 
+const localized = asResult(
+    parseOne(
+        '^error,msg="localhost:1: \\347\\224\\261\\344\\272\\216\\347\\233\\256\\346\\240\\207\\350\\256\\241\\347\\256\\227\\346\\234\\272\\347\\247\\257\\346\\236\\201\\346\\213\\222\\347\\273\\235\\357\\274\\214\\346\\227\\240\\346\\263\\225\\350\\277\\236\\346\\216\\245\\343\\200\\202\\r\\n."\n',
+    ),
+);
+assertEqual(
+    localized.results.msg,
+    'localhost:1: 由于目标计算机积极拒绝，无法连接。\r\n.',
+    'octal escaped UTF-8 message decoded',
+);
+
 const parser = new MiRecordParser();
 const firstChunk = parser.feed('1^do');
 assertEqual(firstChunk.length, 0, 'partial chunk yields no record');
@@ -186,5 +197,13 @@ try {
     tokenStreamThrew = err instanceof MiParseError;
 }
 assert(tokenStreamThrew, 'token on stream record throws MiParseError');
+
+let octalByteThrew = false;
+try {
+    new MiRecordParser().feed('~"\\777"\n');
+} catch (err) {
+    octalByteThrew = err instanceof MiParseError;
+}
+assert(octalByteThrew, 'octal escape above one byte throws MiParseError');
 
 console.log('debug-mi-parser tests passed');

@@ -272,15 +272,26 @@ function parseCString(text: string, index: number): { value: string; next: numbe
     if (text[index] !== '"') {
         throw new MiParseError(`expected MI string: ${text.slice(index)}`);
     }
-    let value = '';
+    const parts: Buffer[] = [];
+    let literal = '';
+    const pushByte = (byte: number): void => {
+        if (literal !== '') {
+            parts.push(Buffer.from(literal, 'utf8'));
+            literal = '';
+        }
+        parts.push(Buffer.from([byte]));
+    };
     let cursor = index + 1;
     while (cursor < text.length) {
         const ch = text[cursor++];
         if (ch === '"') {
-            return { value, next: cursor };
+            if (literal !== '') {
+                parts.push(Buffer.from(literal, 'utf8'));
+            }
+            return { value: Buffer.concat(parts).toString('utf8'), next: cursor };
         }
         if (ch !== '\\') {
-            value += ch;
+            literal += ch;
             continue;
         }
         if (cursor >= text.length) {
@@ -289,40 +300,40 @@ function parseCString(text: string, index: number): { value: string; next: numbe
         const escape = text[cursor++];
         switch (escape) {
             case 'a':
-                value += '\u0007';
+                literal += '\u0007';
                 break;
             case 'b':
-                value += '\b';
+                literal += '\b';
                 break;
             case 'e':
-                value += '\u001b';
+                literal += '\u001b';
                 break;
             case 'f':
-                value += '\f';
+                literal += '\f';
                 break;
             case 'n':
-                value += '\n';
+                literal += '\n';
                 break;
             case 'r':
-                value += '\r';
+                literal += '\r';
                 break;
             case 't':
-                value += '\t';
+                literal += '\t';
                 break;
             case 'v':
-                value += '\v';
+                literal += '\v';
                 break;
             case '"':
-                value += '"';
+                literal += '"';
                 break;
             case '\'':
-                value += '\'';
+                literal += '\'';
                 break;
             case '?':
-                value += '?';
+                literal += '?';
                 break;
             case '\\':
-                value += '\\';
+                literal += '\\';
                 break;
             case 'x': {
                 let digits = '';
@@ -332,7 +343,7 @@ function parseCString(text: string, index: number): { value: string; next: numbe
                 if (digits.length === 0) {
                     throw new MiParseError('invalid hexadecimal MI string escape');
                 }
-                value += String.fromCharCode(parseInt(digits, 16));
+                pushByte(parseInt(digits, 16));
                 break;
             }
             default: {
@@ -343,7 +354,11 @@ function parseCString(text: string, index: number): { value: string; next: numbe
                 while (digits.length < 3 && cursor < text.length && text[cursor] >= '0' && text[cursor] <= '7') {
                     digits += text[cursor++];
                 }
-                value += String.fromCharCode(parseInt(digits, 8));
+                const byte = parseInt(digits, 8);
+                if (byte > 0xff) {
+                    throw new MiParseError(`MI octal escape is not a byte: \\${digits}`);
+                }
+                pushByte(byte);
             }
         }
     }
