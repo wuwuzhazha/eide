@@ -58,6 +58,10 @@
     ],
     "icon": "res/icon/icon.png",
     "main": "./dist/extension.js",
+	"bin": {
+		"eide-cli": "./out/src/cli/main.js",
+		"eide-mcp": "./out/src/mcp/headless_main.js"
+	},
     "readme": "https://github.com/github0null/eide/blob/master/README.md",
     "bugs": {
         "url": "https://github.com/github0null/eide/issues",

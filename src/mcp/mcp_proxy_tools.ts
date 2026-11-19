@@ -23,9 +23,9 @@
 */
 
 import * as z from 'zod/v4';
-import { McpServer } from '@modelcontextprotocol/sdk/server/mcp';
-import { CallToolResult } from '@modelcontextprotocol/sdk/types';
-import { InMemoryTaskStore, InMemoryTaskMessageQueue } from '@modelcontextprotocol/sdk/experimental/tasks/stores/in-memory';
+import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
+import { InMemoryTaskStore, InMemoryTaskMessageQueue } from '@modelcontextprotocol/sdk/experimental/tasks/stores/in-memory.js';
 
 const taskStore = new InMemoryTaskStore();
 

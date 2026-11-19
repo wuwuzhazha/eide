@@ -5,6 +5,12 @@ const roots = [
     NodePath.join(__dirname, '../../../../src/core'),
     NodePath.join(__dirname, '../../../../src/cli')
 ];
+const headlessFiles = [
+    'headless_main.ts',
+    'headless_tools.ts',
+    'headless_project.ts',
+    'mcp_proxy_tools.ts'
+].map(name => NodePath.join(__dirname, '../../../../src/mcp', name));
 const vscodeImport = /(?:\bfrom\s+['"]vscode['"]|\brequire\s*\(\s*['"]vscode['"]\s*\))/;
 
 function listTypeScriptFiles(dir: string): string[] {
@@ -24,6 +30,7 @@ const files: string[] = [];
 for (const root of roots) {
     files.push(...listTypeScriptFiles(root));
 }
+files.push(...headlessFiles);
 if (files.length === 0) {
     console.error('FAIL: no core source files found');
     process.exit(1);
@@ -45,5 +52,5 @@ if (violations.length > 0) {
     process.exit(1);
 }
 
-console.log(`OK: ${files.length} core/cli files have no vscode dependency`);
+console.log(`OK: ${files.length} headless files have no vscode dependency`);
 export {};

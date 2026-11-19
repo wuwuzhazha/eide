@@ -22,23 +22,10 @@
     SOFTWARE.
 */
 
-import Ajv, { ErrorObject } from 'ajv';
 import { File } from '../../lib/node-utility/File';
 import { AbstractProject } from '../EIDEProject';
 import { ResManager } from '../ResManager';
-
-let ajvInstance: Ajv | undefined;
-
-function getAjv(): Ajv {
-    if (!ajvInstance) {
-        ajvInstance = new Ajv({
-            allErrors: true,
-            strict: false,
-            validateSchema: false
-        });
-    }
-    return ajvInstance;
-}
+import { validateBuilderOptionsAgainstSchema } from '../core/builder_options';
 
 export function loadBuilderOptionsSchema(prj: AbstractProject): object {
     const resManager = ResManager.GetInstance();
@@ -50,26 +37,11 @@ export function loadBuilderOptionsSchema(prj: AbstractProject): object {
     return JSON.parse(schemaFile.Read());
 }
 
-function formatAjvErrors(errors: ErrorObject[] | null | undefined): string {
-    if (!errors || errors.length === 0) {
-        return 'Invalid builder options.';
-    }
-    return errors.map(e => {
-        const path = e.instancePath || '/';
-        return `${path}: ${e.message}`;
-    }).join('\n');
-}
-
 /**
  * Validate builder options against toolchain verify JSON schema.
  * Properties not defined in schema are allowed (not rejected).
  * @returns error message when invalid, undefined when valid.
  */
 export function validateBuilderOptions(prj: AbstractProject, options: unknown): string | undefined {
-    const schema = loadBuilderOptionsSchema(prj);
-    const validate = getAjv().compile(schema);
-    if (validate(options)) {
-        return undefined;
-    }
-    return formatAjvErrors(validate.errors);
+    return validateBuilderOptionsAgainstSchema(loadBuilderOptionsSchema(prj), options);
 }

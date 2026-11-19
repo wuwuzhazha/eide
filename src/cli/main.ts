@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 import { BuildExecutionError, cleanProject, HeadlessBuildService } from '../core/build_service';
 import { createFlashPlan } from '../core/flash/plan';
 import { ProcessFlashService } from '../core/flash/service';
@@ -140,4 +141,15 @@ export async function main(argv: string[], io: CliIo = processIo): Promise<numbe
         writeJson(io, errorPayload(command, err));
         return err instanceof BuildExecutionError ? 4 : 3;
     }
+}
+
+if (require.main === module) {
+    main(process.argv.slice(2)).then(
+        code => { process.exitCode = code; },
+        error => {
+            process.stderr.write(`${error instanceof Error ? error.message : String(error)}
+`);
+            process.exitCode = 4;
+        }
+    );
 }
