@@ -517,7 +517,11 @@ export class ProjectConfiguration<T extends BuilderConfigData>
     }
 
     static parseProjectFile<T extends BuilderConfigData>(input: string): ProjectConfigData<T> {
-        return yaml.parse(input);
+        const cfg = yaml.parse(input);
+        if (cfg && typeof cfg.version === 'number') {
+            cfg.version = String(cfg.version);
+        }
+        return cfg;
     }
 
     static dumpProjectFile<T extends BuilderConfigData>(obj: ProjectConfigData<T>): string {

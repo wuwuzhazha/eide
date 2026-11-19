@@ -72,6 +72,11 @@ const workspaceState = {
     update: () => Promise.resolve()
 };
 
+assert(ProjectConfiguration.parseProjectFile('version: 4.1\nname: demo').version === '4.1',
+    'parseProjectFile: numeric version is normalized to string');
+assert(ProjectConfiguration.parseProjectFile('version: "4.1"\nname: demo').version === '4.1',
+    'parseProjectFile: string version is preserved');
+
 let conf: any;
 const writeConfig = (modify?: (cfg: any) => void) => {
     const cfg = baseConfig();
