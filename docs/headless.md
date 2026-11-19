@@ -74,6 +74,7 @@ Options:
 | `--resources <dir>` | EIDE `res` directory (required for build/plan) |
 | `--toolchain-path <dir>` | Toolchain root, containing `bin/arm-none-eabi-gcc` |
 | `--timeout <ms>` | Operation timeout (build 30 min, flash 2 min by default) |
+| `--threads <n>` | Build worker threads (default 4) |
 | `--flasher-exe <path>` | Flash tool executable; required for JLink/OpenOCD/STLink |
 | `--erase-all` | Chip erase instead of programming |
 | `--verify`, `--no-verify` | Force or skip verification where the tool allows it |
