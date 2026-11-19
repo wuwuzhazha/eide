@@ -54,7 +54,11 @@ export class HeadlessDebugSession {
         if (target.length === 0) {
             throw new Error("'target' must not be empty.");
         }
-        const mode = args.mode === 'remote' ? 'remote' : 'extended-remote';
+        const modeValue = args.mode ?? 'extended-remote';
+        if (modeValue !== 'remote' && modeValue !== 'extended-remote') {
+            throw new Error(`Invalid remote mode: ${String(modeValue)}`);
+        }
+        const mode = modeValue;
         let elf: string | undefined;
         if (typeof args.elf === 'string' && args.elf.trim().length > 0) {
             elf = NodePath.resolve(project.projectPath, args.elf);

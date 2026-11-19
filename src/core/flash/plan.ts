@@ -238,18 +238,23 @@ function buildRequest(
     };
 
     switch (uploader) {
-        case 'JLink':
+        case 'JLink': {
+            const device = String(config.cpuInfo?.cpuName || '');
+            if (device.length === 0 || device === 'null') {
+                throw new Error('JLink device is not configured (cpuInfo.cpuName).');
+            }
             return {
                 ...base,
                 uploader,
                 options: {
                     executable,
-                    device: String(config.cpuInfo?.cpuName || ''),
+                    device,
                     interface: jlinkInterface(config.proType),
                     speedKhz: parseInteger(config.speed) ?? DEFAULT_JLINK_SPEED_KHZ,
                     extraArgs: splitCommandLine(String(config.otherCmds || ''))
                 }
             };
+        }
         case 'OpenOCD':
             return {
                 ...base,
