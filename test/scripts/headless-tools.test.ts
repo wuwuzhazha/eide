@@ -193,6 +193,13 @@ async function run(): Promise<void> {
     data = parse(await execute('eide_get_builder_opts', { uid: 'project-uid' }));
     assert(data.global.toolPrefix === 'arm-none-eabi-', 'headless: builder options list');
 
+    result = await execute('eide_set_builder_opts', {
+        uid: 'project-uid',
+        options: { global: 'invalid' }
+    });
+    assert(result.isError === true && result.content[0].text.includes('validation failed'),
+        'headless: invalid builder options are rejected');
+
     result = await execute('eide_build', {
         uid: 'project-uid',
         overrides: { cFlags: '-O2', defines: ['FEATURE=1'] }
