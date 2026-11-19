@@ -10,6 +10,7 @@
 		"types": ["node"], /* 引入 Node.js 类型定义 */
 		"moduleResolution": "node", /* 明确模块解析策略 */
 		"useUnknownInCatchVariables": false,
+		"skipLibCheck": true, /* 跳过 node_modules 内声明文件的类型检查 */
 		/* Additional Checks */
 		// "noImplicitReturns": true, /* Report error when not all code paths in function return a value. */
 		// "noFallthroughCasesInSwitch": true, /* Report errors for fallthrough cases in switch statement. */
