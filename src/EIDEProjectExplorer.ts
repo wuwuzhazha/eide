@@ -3603,6 +3603,10 @@ export class ProjectExplorer implements CustomConfigurationProvider {
             return;
         }
 
+        if (!prj.GetConfiguration().hasExternalChange()) {
+            return;
+        }
+
         const cfgFile = prj.GetConfiguration().GetFile();
         try {
             const conf = ProjectConfiguration.parseProjectFile(cfgFile.Read());
