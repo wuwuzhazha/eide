@@ -373,6 +373,21 @@ async function testStopsAndInterrupt(): Promise<void> {
     assertEqual(stopTimeout.code, 'timeout', 'waitForStop timeout code');
     assert(Date.now() - started < 1000, 'waitForStop timeout is bounded');
     await noStop.session.disconnect();
+
+    const exitWhileWaiting = createHarness((command, token, fake) => {
+        if (command === '-exec-continue') {
+            setTimeout(() => fake.emitExit(1), 10);
+            return `${token}^running\n`;
+        }
+        return standardResponse(command, token);
+    });
+    await exitWhileWaiting.session.connect('localhost:3333');
+    await exitWhileWaiting.session.continue();
+    const exitWaitFailure = await captureReject(
+        exitWhileWaiting.session.waitForStop(1000),
+        'process exit while waiting for stop',
+    );
+    assertEqual(exitWaitFailure.code, 'exited', 'process exit rejects stop wait');
 }
 
 async function testCommandFailureModes(): Promise<void> {
