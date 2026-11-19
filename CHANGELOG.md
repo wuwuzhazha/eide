@@ -6,14 +6,20 @@ All notable version changes will be recorded in this file.
 
 ***
 
-### [Unreleased]
+### [v4.0.1]
+
+**New**:
+  - Added an original EIDE Pro icon (chip with terminal prompt).
+  - Added `THIRD_PARTY_NOTICES.md` and license texts for bundled third-party components.
+
+**Changes**:
+  - Added the EIDE Pro fork copyright to `LICENSE`.
+  - Renamed the GitHub repository to `wuwuzhazha/eide-pro` and set `dev` as the default branch.
+  - Documented why the fork is not submitted upstream: all changes are AI-produced and touch core paths, so they are maintained independently to avoid upstream review and stability risk.
 
 **Docs**:
   - Rewrote the EIDE MCP skill for both VS Code HTTP MCP and headless stdio MCP, including debug tools, overrides, build results, and troubleshooting.
   - Added skill download/install instructions and a release archive (`eide-mcp-tools-skill.zip`).
-
-**Changes**:
-  - Renamed the GitHub repository to `wuwuzhazha/eide-pro` and set `dev` as the default branch.
 
 ***
 

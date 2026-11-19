@@ -1,5 +1,7 @@
 # EIDE Pro
 
+<img src="./res/icon/icon.png" width="96" align="right" alt="EIDE Pro icon">
+
 > Unofficial fork of [github0null/eide](https://github.com/github0null/eide),
 > maintained at [wuwuzhazha/eide-pro](https://github.com/wuwuzhazha/eide-pro). Adds
 > headless CLI/MCP build, flash, and debug with full VS Code build parity.
@@ -8,6 +10,15 @@
 [![](https://img.shields.io/badge/releases-GitHub-green)](https://github.com/wuwuzhazha/eide-pro/releases)
 
 ***
+
+## Why this fork is not upstreamed
+
+All changes in this fork were produced with AI assistance. Although they are
+covered by the test suite, they touch core project-loading and build paths, and
+submitting them upstream would put a large review and stability burden on the
+upstream maintainers. EIDE Pro is therefore maintained as an independent
+reference implementation and installable extension. Upstream remains
+[github0null/eide](https://github.com/github0null/eide).
 
 ## [中文](./README_ZH-CN.md)
 
@@ -129,6 +140,10 @@ You can build this project by your self.
 
 If you have any good ideas, you can first put forward your suggestions in the issue section. If they are feasible, we will implement them later. If you want to add features by yourself, please also share your ideas at the very beginning (otherwise, we cannot guarantee that your PR will be merged). 
 If you are ready and have completed the debugging and testing, then you can submit a pull request request to the dev branch. Thanks.
+
+## License
+
+MIT. See [LICENSE](./LICENSE) and [THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md).
 
 ## Sponsor 👍
 

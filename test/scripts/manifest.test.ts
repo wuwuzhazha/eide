@@ -12,6 +12,7 @@ function assert(cond: boolean, msg: string): void {
 const root = process.cwd();
 const pkgText = fs.readFileSync(NodePath.join(root, 'package.json'), 'utf8');
 const pkg = JSON.parse(pkgText);
+const lock = JSON.parse(fs.readFileSync(NodePath.join(root, 'package-lock.json'), 'utf8'));
 const nlsEn = JSON.parse(fs.readFileSync(NodePath.join(root, 'package.nls.json'), 'utf8'));
 const nlsZh = JSON.parse(fs.readFileSync(NodePath.join(root, 'package.nls.zh-CN.json'), 'utf8'));
 
@@ -35,3 +36,7 @@ assert(`${pkg.publisher}.${pkg.name}` === EXTENSION_ID,
     `package identity matches extension id '${EXTENSION_ID}'`);
 assert(pkg.displayName === EXTENSION_DISPLAY_NAME,
     `display name matches '${EXTENSION_DISPLAY_NAME}'`);
+assert(lock.version === pkg.version && lock.packages?.['']?.version === pkg.version,
+    `package-lock version matches ${pkg.version}`);
+assert(fs.existsSync(NodePath.join(root, pkg.icon)),
+    `package icon exists at '${pkg.icon}'`);

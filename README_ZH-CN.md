@@ -1,5 +1,7 @@
 # EIDE Pro
 
+<img src="./res/icon/icon.png" width="96" align="right" alt="EIDE Pro 图标">
+
 > [github0null/eide](https://github.com/github0null/eide) 的非官方分支，由
 > [wuwuzhazha/eide-pro](https://github.com/wuwuzhazha/eide-pro) 维护。新增与 VS Code
 > 构建行为一致的 Headless CLI/MCP 编译、烧录和调试能力。
@@ -8,6 +10,11 @@
 [![](https://img.shields.io/badge/发布-GitHub-green)](https://github.com/wuwuzhazha/eide-pro/releases)
 
 ***
+
+## 为什么没有向上游提交 PR
+
+本分支的修改全部由 AI 执行。虽然已通过完整测试，但改动涉及工程加载和构建核心链路，直接提交上游会给维护者带来较大的审查和稳定性负担。因此 EIDE Pro 作为独立的参考实现和可安装插件维护，上游仍是
+[github0null/eide](https://github.com/github0null/eide)。
 
 ## 简述 📑
 
@@ -107,6 +114,10 @@
 如果您现在就想自己动手添加功能，那么也请在一开始先提出您的想法（否则我们不能保证您的PR被合并），避免浪费您的时间。
 
 在完成了更改后，如果您确保没有其他问题，那么您可以向 dev 分支提出 pull request 请求，稍后我们会进行审核。
+
+## 许可证
+
+MIT。详见 [LICENSE](./LICENSE) 与 [THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md)。
 
 ## 赞助 👍
 
