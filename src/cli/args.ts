@@ -10,6 +10,7 @@ export interface CliOptions {
     mode?: BuildMode;
     dryRun: boolean;
     timeoutMs: number;
+    threads: number;
     resourcesDir?: string;
     toolchainPath?: string;
     overrides: BuildOverrides;
@@ -50,6 +51,7 @@ export const cliHelp = [
     '      --resources <dir>        EIDE resources directory (tools/models)',
     '      --toolchain-path <dir>   Toolchain installation directory',
     '      --timeout <ms>           Operation timeout (default: build 1800000, flash 120000)',
+    '      --threads <n>            Build worker threads (default: 4)',
     '      --flasher-exe <path>     Flash tool executable',
     '      --erase-all              Erase the whole chip before flashing',
     '      --verify                 Verify after flashing (default for capable tools)',
@@ -93,6 +95,7 @@ export function parseCliArgs(argv: string[]): ParsedCli {
     let mode: BuildMode | undefined = command === 'rebuild' ? 'rebuild' : undefined;
     let dryRun = command === 'plan';
     let timeoutMs = command === 'flash' ? DEFAULT_FLASH_TIMEOUT_MS : DEFAULT_BUILD_TIMEOUT_MS;
+    let threads = 4;
     let resourcesDir: string | undefined;
     let toolchainPath: string | undefined;
     let flasherExecutable: string | undefined;
@@ -180,6 +183,16 @@ export function parseCliArgs(argv: string[]): ParsedCli {
                 timeoutMs = parsed;
                 break;
             }
+            case '--threads': {
+                const value = readValue(argv, i, arg);
+                i++;
+                const parsed = Number(value);
+                if (!Number.isInteger(parsed) || parsed <= 0 || parsed > 256) {
+                    throw new CliUsageError(`Invalid thread count: ${value}`);
+                }
+                threads = parsed;
+                break;
+            }
             case '--flasher-exe':
                 flasherExecutable = readValue(argv, i, arg);
                 i++;
@@ -217,6 +230,9 @@ export function parseCliArgs(argv: string[]): ParsedCli {
         if (mode !== undefined) {
             throw new CliUsageError('--mode is not supported for flash.');
         }
+        if (threads !== 4) {
+            throw new CliUsageError('--threads is not supported for flash.');
+        }
         if (Object.keys(overrides).length > 0) {
             throw new CliUsageError('Build overrides are not supported for flash.');
         }
@@ -235,6 +251,7 @@ export function parseCliArgs(argv: string[]): ParsedCli {
             mode,
             dryRun,
             timeoutMs,
+            threads,
             resourcesDir,
             toolchainPath,
             overrides,

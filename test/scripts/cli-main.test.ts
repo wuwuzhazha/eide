@@ -103,9 +103,10 @@ async function run(): Promise<void> {
 
     text = io();
     code = await main(['plan', '--project', root, '--resources', resources,
-        '--toolchain-path', toolchain], text);
+        '--toolchain-path', toolchain, '--threads', '8'], text);
     const plan = JSON.parse(text.out());
     assert(code === 0 && plan.success === true && plan.command === 'plan', 'cli: plan succeeds');
+    assert(plan.params.threadNum === 8, 'cli: plan thread count');
     assert(plan.args.includes('--no-color'), 'cli: plan args');
     assert(fs.existsSync(plan.paramsFile), 'cli: plan writes builder params');
     assert(plan.params.name === 'demo', 'cli: plan includes params');

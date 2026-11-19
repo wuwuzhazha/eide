@@ -40,7 +40,8 @@ const parsed = parseCliArgs([
     '--ldflag', '-Wl,--gc-sections',
     '--resources', 'E:/eide/res',
     '--toolchain-path', 'D:/gcc',
-    '--timeout', '90000'
+    '--timeout', '90000',
+    '--threads', '8'
 ]);
 assert(parsed.kind === 'run', 'args: returns run command');
 assert(parsed.options.command === 'build', 'args: command');
@@ -49,6 +50,7 @@ assert(parsed.options.target === 'Debug', 'args: target');
 assert(parsed.options.workspaceFile === 'demo.code-workspace', 'args: workspace file');
 assert(parsed.options.mode === 'incremental', 'args: mode');
 assert(parsed.options.timeoutMs === 90000, 'args: timeout');
+assert(parsed.options.threads === 8, 'args: threads');
 assert(parsed.options.dryRun === true, 'args: dry run');
 assert(parsed.options.overrides.defines.join('|') === 'A=1|B=2', 'args: defines');
 assert(parsed.options.overrides.includeDirs.join('|') === 'inc', 'args: include dirs');
@@ -109,6 +111,10 @@ expectUsageError(['flash', '--project', 'E:/demo', '--verify', '--no-verify'],
     'args: conflicting verify flags are rejected');
 expectUsageError(['flash', '--project', 'E:/demo', '--erase-all', '--artifact', 'fw.hex'],
     'args: erase all cannot use an artifact');
+expectUsageError(['flash', '--project', 'E:/demo', '--threads', '8'],
+    'args: threads are rejected for flash');
+expectUsageError(['build', '--project', 'E:/demo', '--threads', '0'],
+    'args: invalid thread count is rejected');
 
 console.log('All CLI args tests passed.');
 export {};

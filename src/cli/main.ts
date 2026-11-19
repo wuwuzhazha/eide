@@ -109,6 +109,7 @@ export async function main(argv: string[], io: CliIo = processIo): Promise<numbe
             toolchainPath: requireOption(options.toolchainPath, '--toolchain-path'),
             runner: new NodeProcessRunner(),
             timeoutMs: options.timeoutMs,
+            threadNum: options.threads,
             logger: new StderrLogger()
         });
         const request = toRequest(options);
