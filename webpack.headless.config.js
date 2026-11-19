@@ -20,6 +20,9 @@ module.exports = {
     resolve: {
         extensions: ['.ts', '.js']
     },
+    externals: {
+        x2js: 'commonjs2 x2js'
+    },
     module: {
         rules: [
             {

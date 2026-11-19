@@ -96,9 +96,10 @@ Build results contain `success`, `stage`, `problems`, `memory`, `artifacts`,
 `<outDir>/<target>/build-manifest.json`. The compiler database can be fed
 directly to clangd or other language servers.
 
-The repository builds self-contained entries at `dist/eide_cli.js` and
+The repository builds standalone entry scripts at `dist/eide_cli.js` and
 `dist/eide_mcp.js` (`npm run webpack:headless`). Use `node dist/eide_cli.js`
-and `node dist/eide_mcp.js` when running from a packaged extension.
+and `node dist/eide_mcp.js` when running from a packaged extension. The MCP
+bundle resolves `x2js` from the extension's `node_modules`.
 
 ## MCP server (stdio)
 
