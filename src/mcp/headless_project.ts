@@ -207,37 +207,4 @@ export class HeadlessProject {
             this.dependence(target).defineList = normalized;
         });
     }
-
-    getToolchainName(): string {
-        const config = this.readConfig();
-        return String(this.targetConfig(config).target.toolchain || '');
-    }
-
-    getBuilderOptions(): any {
-        const config = this.readConfig();
-        const { target } = this.targetConfig(config);
-        const options = target.toolchainConfigMap?.[target.toolchain]?.options;
-        if (options === undefined) {
-            return {};
-        }
-        if (!options || typeof options !== 'object' || Array.isArray(options)) {
-            throw new Error(`Invalid builder options for toolchain '${target.toolchain}'.`);
-        }
-        return options;
-    }
-
-    setBuilderOptions(options: unknown): void {
-        if (!options || typeof options !== 'object' || Array.isArray(options)) {
-            throw new Error('options must be a BuilderOptions JSON object.');
-        }
-        this.mutate((_config, target) => {
-            const configMap = target.toolchainConfigMap;
-            const toolchainConfig = configMap?.[target.toolchain];
-            if (!toolchainConfig || typeof toolchainConfig !== 'object') {
-                throw new Error(
-                    `Target has no config for toolchain '${target.toolchain}'.`);
-            }
-            toolchainConfig.options = JSON.parse(JSON.stringify(options));
-        });
-    }
 }

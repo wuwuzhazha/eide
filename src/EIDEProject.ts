@@ -1500,6 +1500,8 @@ export abstract class AbstractProject implements CustomConfigurationProvider, Pr
     Close() {
         if (this.lock_handle)
             FileLock.unlock(this.lock_handle);
+        this.clearPendingSave();
+        this.dispose();
         this.sourceRoots.DisposeAll();
         this.configMap.Dispose();
         this.eideDirWatcher?.Close();
@@ -4720,6 +4722,9 @@ class EIDEProject extends AbstractProject {
     }
 
     dispose() {
-        // nothing todo
+        if (this.__cpptools_updateTimeout) {
+            clearTimeout(this.__cpptools_updateTimeout);
+            this.__cpptools_updateTimeout = undefined;
+        }
     }
 }

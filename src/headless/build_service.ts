@@ -1,6 +1,7 @@
 import * as fs from 'fs';
 import * as NodePath from 'path';
 import type { AbstractProject } from '../EIDEProject';
+import type { BuilderOptions } from '../EIDETypeDefine';
 import type { BuildOptions } from '../CodeBuilder';
 import { Logger, ProcessResult, ProcessRunner } from '../core/adapters';
 import { BuildProblem, parseToolchainProblems } from '../core/problems';
@@ -29,6 +30,8 @@ interface BuildInvocation {
     paramsPath: string;
 }
 
+export type ProjectRequest = Pick<BuildRequest, 'projectPath' | 'workspaceFile' | 'target'>;
+
 function readText(path: string): string | undefined {
     try {
         return fs.readFileSync(path, 'utf8');
@@ -38,6 +41,11 @@ function readText(path: string): string | undefined {
         }
         throw error;
     }
+}
+
+function builderOptionsApi(): typeof import('../mcp/mcp_builder_opts_validate') {
+    return require('../mcp/mcp_builder_opts_validate') as
+        typeof import('../mcp/mcp_builder_opts_validate');
 }
 
 function optionString(options: { [key: string]: any }, path: string[]): string {
@@ -220,7 +228,42 @@ export class EideBuildService implements BuildService {
         }
     }
 
-    private hostOptions(request: BuildRequest): HeadlessHostOptions {
+    async getBuilderOptionsSchema(request: ProjectRequest): Promise<object> {
+        const session = await openHeadlessProject(this.hostOptions(request));
+        try {
+            return builderOptionsApi().loadBuilderOptionsSchema(session.project);
+        } finally {
+            session.close();
+        }
+    }
+
+    async getBuilderOptions(request: ProjectRequest): Promise<BuilderOptions> {
+        const session = await openHeadlessProject(this.hostOptions(request));
+        try {
+            return session.project.getBuilderOptions();
+        } finally {
+            session.close();
+        }
+    }
+
+    async setBuilderOptions(request: ProjectRequest, options: unknown): Promise<void> {
+        const session = await openHeadlessProject(this.hostOptions(request));
+        try {
+            const validation = builderOptionsApi().validateBuilderOptions(
+                session.project, options);
+            if (validation) {
+                throw new Error(`Builder options validation failed:\n${validation}`);
+            }
+            session.project.GetConfiguration().toolchainConfigModel.setOptions(
+                options as BuilderOptions);
+            session.project.onBuilderConfigChanged();
+            session.project.Save(true);
+        } finally {
+            session.close();
+        }
+    }
+
+    private hostOptions(request: ProjectRequest): HeadlessHostOptions {
         return {
             projectPath: request.projectPath,
             workspaceFile: request.workspaceFile,

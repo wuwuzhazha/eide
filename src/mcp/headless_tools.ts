@@ -2,9 +2,7 @@ import { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import * as fs from 'fs';
 import * as NodePath from 'path';
 import { BuildStatistics, queryCallgraph, summarizeStackUsage } from '../BuildStatistics';
-import { cleanProject } from '../core/build_service';
-import { EideBuildService } from '../headless/build_service';
-import { validateBuilderOptionsAgainstSchema } from '../core/builder_options';
+import { EideBuildService, ProjectRequest } from '../headless/build_service';
 import { validateBuildOverrides } from '../core/build_overrides';
 import { createFlashPlan } from '../core/flash/plan';
 import { ProcessFlashService } from '../core/flash/service';
@@ -21,7 +19,6 @@ export interface HeadlessToolOptions {
     resourcesDir: string;
     extensionRoot?: string;
     toolchainPath?: string;
-    schemaDir: string;
     settingsFile?: string;
     builderThreads?: number;
     flasherExecutable?: string;
@@ -63,11 +60,24 @@ function readPositiveInt(value: unknown, fallback: number, max: number, name: st
     return value;
 }
 
-function schemaForToolchain(toolchain: string): string {
-    if (toolchain === 'GCC') {
-        return 'arm.gcc.verify.json';
+function readOptionalBoolean(value: unknown, name: string): boolean | undefined {
+    if (value === undefined) {
+        return undefined;
     }
-    throw new Error(`Builder options are not available for toolchain '${toolchain}'.`);
+    if (typeof value !== 'boolean') {
+        throw new Error(`'${name}' must be a boolean.`);
+    }
+    return value;
+}
+
+function readOptionalString(value: unknown, name: string): string | undefined {
+    if (value === undefined) {
+        return undefined;
+    }
+    if (typeof value !== 'string' || value.trim().length === 0) {
+        throw new Error(`'${name}' must be a non-empty string.`);
+    }
+    return value;
 }
 
 function readBuildStatistics(project: HeadlessProject): BuildStatistics {
@@ -135,6 +145,13 @@ class HeadlessToolRunner {
         throw new Error(`Not such project (uid=${uid}).`);
     }
 
+    private projectRequest(project: HeadlessProject): ProjectRequest {
+        return {
+            projectPath: project.projectPath,
+            target: project.getTargetName()
+        };
+    }
+
     async execute(tool: string, args: Record<string, unknown>): Promise<CallToolResult> {
         const uid = args.uid as string | null | undefined;
         const project = this.resolveProject(uid);
@@ -170,21 +187,32 @@ class HeadlessToolRunner {
                 return makeJsonResult(result, !result.success);
             }
             case 'eide_clean': {
-                const result = cleanProject({
-                    projectPath: project.projectPath,
-                    target: project.getTargetName()
-                });
+                const result = await this.builder.clean(this.projectRequest(project));
                 return makeJsonResult(result, !result.success);
             }
             case 'eide_flash': {
+                const artifact = readOptionalString(args.artifact, 'artifact');
+                const verify = readOptionalBoolean(args.verify, 'verify');
+                const dryRun = readOptionalBoolean(args.dryRun, 'dryRun') === true;
+                if (artifact !== undefined && args.eraseAll === true) {
+                    throw new Error("'artifact' cannot be combined with 'eraseAll'.");
+                }
                 const snapshot = loadProjectSnapshot(
                     project.projectPath, project.getTargetName());
                 const plan = createFlashPlan(snapshot, {
                     flasherExecutable: this.options.flasherExecutable,
                     timeoutMs: this.options.flashTimeoutMs,
                     eraseAll: args.eraseAll === true,
-                    verify: args.verify === true ? true : undefined
+                    verify,
+                    artifact
                 });
+                if (dryRun) {
+                    return makeJsonResult({
+                        uploader: plan.uploader,
+                        command: plan.command,
+                        request: plan.request
+                    });
+                }
                 const result = await new ProcessFlashService(this.options.runner).flash(plan.request);
                 return makeJsonResult({ uploader: plan.uploader, ...result }, !result.success);
             }
@@ -234,31 +262,16 @@ class HeadlessToolRunner {
                 project.setDefines(defines as string[]);
                 return makeTextResult(true, 'Succeed.');
             }
-            case 'eide_get_builder_opts_schema': {
-                const file = NodePath.join(
-                    this.options.schemaDir, schemaForToolchain(project.getToolchainName()));
-                if (!fs.existsSync(file)) {
-                    throw new Error(`Builder options schema not found: ${file}`);
-                }
-                return makeJsonResult(JSON.parse(fs.readFileSync(file, 'utf8')));
-            }
+            case 'eide_get_builder_opts_schema':
+                return makeJsonResult(
+                    await this.builder.getBuilderOptionsSchema(this.projectRequest(project)));
             case 'eide_get_builder_opts':
-                return makeJsonResult(project.getBuilderOptions());
-            case 'eide_set_builder_opts': {
-                const options = args.options;
-                const schemaFile = NodePath.join(
-                    this.options.schemaDir, schemaForToolchain(project.getToolchainName()));
-                if (!fs.existsSync(schemaFile)) {
-                    throw new Error(`Builder options schema not found: ${schemaFile}`);
-                }
-                const schema = JSON.parse(fs.readFileSync(schemaFile, 'utf8'));
-                const validation = validateBuilderOptionsAgainstSchema(schema, options);
-                if (validation) {
-                    return makeTextResult(false, `Builder options validation failed:\n${validation}`);
-                }
-                project.setBuilderOptions(options);
+                return makeJsonResult(await this.builder.getBuilderOptions(
+                    this.projectRequest(project)));
+            case 'eide_set_builder_opts':
+                await this.builder.setBuilderOptions(
+                    this.projectRequest(project), args.options);
                 return makeTextResult(true, 'Succeed.');
-            }
             case 'eide_get_stack_usage': {
                 const topN = readPositiveInt(args.topN, 20, 500, 'topN');
                 const stats = readBuildStatistics(project);
