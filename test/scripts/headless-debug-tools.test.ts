@@ -129,6 +129,26 @@ function response(command: string, token: number): string | string[] | undefined
     if (command.startsWith('-break-delete ')) {
         return `${token}^done\n(gdb) \n`;
     }
+    if (command === '-thread-info') {
+        return `${token}^done,threads=[{id="1",target-id="Thread 1",name="main",state="stopped",frame={level="0",addr="0x08000000",func="main",file="main.c",line="10"}},{id="2",target-id="Thread 2",name="worker",state="stopped",frame={level="0",addr="0x08000100",func="worker"}}],current-thread-id="1"\n(gdb) \n`;
+    }
+    if (command === '-thread-select 2') {
+        return `${token}^done,new-thread-id="2",frame={level="0",addr="0x08000100",func="worker",file="worker.c",line="20"}\n(gdb) \n`;
+    }
+    if (command === '-stack-select-frame 1') {
+        return `${token}^done\n(gdb) \n`;
+    }
+    if (command.startsWith('-stack-list-variables ')) {
+        return `${token}^done,variables=[{name="counter",value="42"},{name="argc",value="1"}]\n(gdb) \n`;
+    }
+    if (command === '-exec-next' || command === '-exec-step' || command === '-exec-finish') {
+        const reason = command === '-exec-finish' ? 'function-finished' : 'end-stepping-range';
+        return [
+            `${token}^running\n`,
+            `*stopped,reason="${reason}",frame={func="main",file="main.c",line="11"}\n`,
+            '(gdb) \n'
+        ];
+    }
     if (command === '-exec-continue') {
         return [
             `${token}^running\n`,
@@ -293,6 +313,59 @@ async function run(): Promise<void> {
     result = await execute('eide_debug_list_breakpoints', { uid: 'debug-uid' });
     assert(result.isError === true, 'headless debug: breakpoint list rejects malformed response');
     malformed = 'none';
+
+    data = parse(await execute('eide_debug_list_threads', { uid: 'debug-uid' }));
+    assert(data.threads.length === 2 && data.currentThreadId === 1,
+        'headless debug: list threads');
+    assert(data.threads[1].name === 'worker' && data.threads[1].frame.functionName === 'worker',
+        'headless debug: thread fields');
+
+    data = parse(await execute('eide_debug_select_thread', { uid: 'debug-uid', id: 2 }));
+    assert(data.threadId === 2 && data.frame.functionName === 'worker',
+        'headless debug: select thread');
+
+    data = parse(await execute('eide_debug_select_frame', { uid: 'debug-uid', level: 1 }));
+    assert(data.success === true && data.level === 1, 'headless debug: select frame');
+
+    data = parse(await execute('eide_debug_list_variables', { uid: 'debug-uid' }));
+    assert(data.variables.length === 2 && data.variables[0].name === 'counter',
+        'headless debug: list variables');
+
+    data = parse(await execute('eide_debug_list_variables', {
+        uid: 'debug-uid', threadId: 2, frameLevel: 1
+    }));
+    assert(data.threadId === 2 && data.frameLevel === 1 && data.variables[1].value === '1',
+        'headless debug: scoped variables');
+
+    data = parse(await execute('eide_debug_step_over', {
+        uid: 'debug-uid', stopTimeoutMs: 1000
+    }));
+    assert(data.class === 'stopped' && data.results.reason === 'end-stepping-range',
+        'headless debug: step over waits for stop');
+
+    data = parse(await execute('eide_debug_step_into', { uid: 'debug-uid' }));
+    assert(data.class === 'stopped' && data.results.reason === 'end-stepping-range',
+        'headless debug: step into waits for stop');
+
+    data = parse(await execute('eide_debug_step_out', { uid: 'debug-uid' }));
+    assert(data.class === 'stopped' && data.results.reason === 'function-finished',
+        'headless debug: step out waits for stop');
+
+    const beforeInvalidStep = harness.fake.written.length;
+    result = await execute('eide_debug_step_over', { uid: 'debug-uid', stopTimeoutMs: 0 });
+    assert(result.isError === true && result.content[0].text.includes('stopTimeoutMs'),
+        'headless debug: step rejects invalid timeout');
+    assert(harness.fake.written.length === beforeInvalidStep,
+        'headless debug: invalid timeout does not step the target');
+    result = await execute('eide_debug_select_thread', { uid: 'debug-uid', id: 0 });
+    assert(result.isError === true && result.content[0].text.includes('id'),
+        'headless debug: select thread rejects id 0');
+    result = await execute('eide_debug_select_frame', { uid: 'debug-uid', level: -1 });
+    assert(result.isError === true && result.content[0].text.includes('level'),
+        'headless debug: select frame rejects negative level');
+    result = await execute('eide_debug_list_variables', { uid: 'debug-uid', threadId: 0 });
+    assert(result.isError === true && result.content[0].text.includes('threadId'),
+        'headless debug: variables reject invalid thread');
 
     data = parse(await execute('eide_debug_continue', { uid: 'debug-uid' }));
     assert(data.class === 'stopped' && data.results.reason === 'breakpoint-hit',

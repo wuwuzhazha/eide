@@ -50,7 +50,7 @@ async function verifyMcp(serverPath, project, workspace) {
     try {
         await client.connect(transport);
         const tools = await client.listTools();
-        assert(tools.tools.length === 35, 'installed MCP server exposes 35 tools');
+        assert(tools.tools.length === 42, 'installed MCP server exposes 42 tools');
         const result = await client.callTool({
             name: 'eide_get_targets',
             arguments: { uid: 'headless-e2e' }

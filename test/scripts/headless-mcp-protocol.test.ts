@@ -67,13 +67,27 @@ async function run(): Promise<void> {
         await client.connect(transport);
 
         const tools = await client.listTools();
-        assert(tools.tools.length === 35, 'protocol: exposes 35 tools');
+        assert(tools.tools.length === 42, 'protocol: exposes 42 tools');
         assert(tools.tools.some((tool: any) => tool.name === 'eide_debug_connect'),
             'protocol: debug tools are exposed');
         assert(tools.tools.some((tool: any) => tool.name === 'eide_debug_backtrace'),
             'protocol: debug backtrace tool is exposed');
         assert(tools.tools.some((tool: any) => tool.name === 'eide_debug_list_breakpoints'),
             'protocol: debug breakpoint list tool is exposed');
+        assert(tools.tools.some((tool: any) => tool.name === 'eide_debug_step_over'),
+            'protocol: debug step-over tool is exposed');
+        assert(tools.tools.some((tool: any) => tool.name === 'eide_debug_step_into'),
+            'protocol: debug step-into tool is exposed');
+        assert(tools.tools.some((tool: any) => tool.name === 'eide_debug_step_out'),
+            'protocol: debug step-out tool is exposed');
+        assert(tools.tools.some((tool: any) => tool.name === 'eide_debug_list_threads'),
+            'protocol: debug thread list tool is exposed');
+        assert(tools.tools.some((tool: any) => tool.name === 'eide_debug_select_thread'),
+            'protocol: debug thread select tool is exposed');
+        assert(tools.tools.some((tool: any) => tool.name === 'eide_debug_select_frame'),
+            'protocol: debug frame select tool is exposed');
+        assert(tools.tools.some((tool: any) => tool.name === 'eide_debug_list_variables'),
+            'protocol: debug variable list tool is exposed');
         assert(tools.tools.some((tool: any) => tool.name === 'eide_build'),
             'protocol: build tool is exposed');
         const flashTool = tools.tools.find((tool: any) => tool.name === 'eide_flash');
@@ -81,6 +95,14 @@ async function run(): Promise<void> {
             && flashTool.inputSchema.properties.verify !== undefined
             && flashTool.inputSchema.properties.dryRun !== undefined,
         'protocol: headless flash exposes artifact, verify and dryRun');
+        const stepTool = tools.tools.find((tool: any) => tool.name === 'eide_debug_step_over');
+        assert(stepTool.inputSchema.properties.stopTimeoutMs !== undefined,
+            'protocol: step tools expose stopTimeoutMs');
+        const variablesTool = tools.tools.find(
+            (tool: any) => tool.name === 'eide_debug_list_variables');
+        assert(variablesTool.inputSchema.properties.threadId !== undefined
+            && variablesTool.inputSchema.properties.frameLevel !== undefined,
+        'protocol: variable tool exposes thread and frame scope');
 
         let result = await client.callTool({
             name: 'eide_get_targets',

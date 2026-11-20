@@ -335,6 +335,149 @@ async function testBreakpointsAndEvaluation(): Promise<void> {
     await harness.session.disconnect();
 }
 
+async function testThreadsFramesAndVariables(): Promise<void> {
+    const harness = createHarness((command, token) => {
+        if (command === '-thread-info') {
+            return `${token}^done,threads=[{id="1",target-id="Thread 1",name="main",state="stopped",frame={level="0",addr="0x08000100",func="main",file="main.c",line="10"}},{id="2",target-id="Thread 2",name="worker",state="stopped",frame={level="0",addr="0x08000200",func="worker"}}],current-thread-id="1"\n`;
+        }
+        if (command === '-thread-select 2') {
+            return `${token}^done,new-thread-id="2",frame={level="0",addr="0x08000200",func="worker",file="worker.c",line="20"}\n`;
+        }
+        if (command === '-stack-select-frame 1') {
+            return `${token}^done\n`;
+        }
+        if (command.startsWith('-stack-list-variables ')) {
+            return `${token}^done,variables=[{name="argc",value="2"},{name="argv",value="0x20001000"},{name="optimized",value="<optimized out>"}]\n`;
+        }
+        return standardResponse(command, token);
+    });
+    await harness.session.connect('localhost:3333');
+
+    const threads = await harness.session.listThreads();
+    assertEqual(harness.fake.written[3], '4-thread-info\n', 'thread info command');
+    assertEqual(threads.threads.length, 2, 'thread count');
+    assertEqual(threads.currentThreadId, 1, 'current thread id');
+    assertEqual(threads.threads[0].id, 1, 'first thread id');
+    assertEqual(threads.threads[0].targetId, 'Thread 1', 'first thread target id');
+    assertEqual(threads.threads[0].name, 'main', 'first thread name');
+    assertEqual(threads.threads[0].state, 'stopped', 'first thread state');
+    assertEqual(threads.threads[0].frame?.functionName, 'main', 'first thread frame');
+    assertEqual(threads.threads[1].frame?.functionName, 'worker', 'second thread frame');
+
+    const selected = await harness.session.selectThread(2);
+    assertEqual(harness.fake.written[4], '5-thread-select 2\n', 'thread select command');
+    assertEqual(selected?.functionName, 'worker', 'selected thread frame');
+    assertEqual(selected?.line, 20, 'selected thread frame line');
+
+    await harness.session.selectFrame(1);
+    assertEqual(harness.fake.written[5], '6-stack-select-frame 1\n', 'frame select command');
+
+    const variables = await harness.session.listVariables();
+    assertEqual(
+        harness.fake.written[6],
+        '7-stack-list-variables --all-values\n',
+        'variable list command',
+    );
+    assertEqual(variables.length, 3, 'variable count');
+    assertEqual(variables[0].name, 'argc', 'variable name');
+    assertEqual(variables[0].value, '2', 'variable value');
+    assertEqual(variables[2].value, '<optimized out>', 'optimized out value');
+
+    const scoped = await harness.session.listVariables({ threadId: 2, frameLevel: 1 });
+    assertEqual(
+        harness.fake.written[7],
+        '8-stack-list-variables --all-values --thread 2 --frame 1\n',
+        'scoped variable list command',
+    );
+    assertEqual(scoped.length, 3, 'scoped variable count');
+    await harness.session.disconnect();
+
+    const malformedThreads = createHarness((command, token) => {
+        if (command === '-thread-info') {
+            return `${token}^done,threads=[{id="0"}]\n`;
+        }
+        return standardResponse(command, token);
+    });
+    await malformedThreads.session.connect('localhost:3333');
+    const threadFailure = await captureReject(
+        malformedThreads.session.listThreads(),
+        'invalid thread id',
+    );
+    assertEqual(threadFailure.code, 'protocol', 'invalid thread id code');
+    await malformedThreads.session.disconnect();
+
+    const missingThreads = createHarness((command, token) => {
+        if (command === '-thread-info') {
+            return `${token}^done\n`;
+        }
+        return standardResponse(command, token);
+    });
+    await missingThreads.session.connect('localhost:3333');
+    const missingThreadFailure = await captureReject(
+        missingThreads.session.listThreads(),
+        'missing thread list',
+    );
+    assertEqual(missingThreadFailure.code, 'protocol', 'missing thread list code');
+    await missingThreads.session.disconnect();
+
+    const malformedVariables = createHarness((command, token) => {
+        if (command.startsWith('-stack-list-variables ')) {
+            return `${token}^done,variables=[{value="1"}]\n`;
+        }
+        return standardResponse(command, token);
+    });
+    await malformedVariables.session.connect('localhost:3333');
+    const variableFailure = await captureReject(
+        malformedVariables.session.listVariables(),
+        'variable without name',
+    );
+    assertEqual(variableFailure.code, 'protocol', 'variable without name code');
+    await malformedVariables.session.disconnect();
+
+    await captureReject(harness.session.selectThread(0), 'thread id validation');
+    await captureReject(harness.session.selectFrame(-1), 'frame level validation');
+    await captureReject(
+        harness.session.listVariables({ threadId: 0 }),
+        'variable thread id validation',
+    );
+    await captureReject(
+        harness.session.listVariables({ frameLevel: -1 }),
+        'variable frame level validation',
+    );
+}
+
+async function testStepping(): Promise<void> {
+    const harness = createHarness((command, token) => {
+        if (command === '-exec-next') {
+            return `${token}^running\n*stopped,reason="end-stepping-range",frame={level="0",addr="0x08000104",func="main",line="11"},thread-id="1"\n`;
+        }
+        if (command === '-exec-step') {
+            return `${token}^running\n*stopped,reason="end-stepping-range",frame={level="0",addr="0x08000200",func="tick",line="20"},thread-id="1"\n`;
+        }
+        if (command === '-exec-finish') {
+            return `${token}^running\n*stopped,reason="function-finished",frame={level="0",addr="0x08000108",func="main",line="12"},thread-id="1"\n`;
+        }
+        return standardResponse(command, token);
+    });
+    await harness.session.connect('localhost:3333');
+
+    await harness.session.stepOver();
+    const over = await harness.session.waitForStop(100);
+    assertEqual(harness.fake.written[3], '4-exec-next\n', 'step over command');
+    assertEqual(over.results.reason, 'end-stepping-range', 'step over stop reason');
+
+    await harness.session.stepInto();
+    const into = await harness.session.waitForStop(100);
+    assertEqual(harness.fake.written[4], '5-exec-step\n', 'step into command');
+    assertEqual(into.results.reason, 'end-stepping-range', 'step into stop reason');
+
+    await harness.session.stepOut();
+    const out = await harness.session.waitForStop(100);
+    assertEqual(harness.fake.written[5], '6-exec-finish\n', 'step out command');
+    assertEqual(out.results.reason, 'function-finished', 'step out stop reason');
+    await harness.session.disconnect();
+}
+
 async function testStopsAndInterrupt(): Promise<void> {
     const harness = createHarness((command, token) => {
         if (command === '-exec-continue') {
@@ -608,6 +751,8 @@ async function run(): Promise<void> {
     await testBreakpointsAndEvaluation();
     await testBacktraceAndBreakpointList();
     await testBacktraceAndBreakpointErrors();
+    await testThreadsFramesAndVariables();
+    await testStepping();
     await testStopsAndInterrupt();
     await testCommandFailureModes();
     console.log('debug-mi-session tests passed');
