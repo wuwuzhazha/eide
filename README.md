@@ -71,7 +71,7 @@ it from the command line or with **Extensions: Install from VSIX...** in VS
 Code:
 
 ```bash
-code --install-extension ./eide-pro-4.2.0.vsix
+code --install-extension ./eide-pro-4.3.0.vsix
 ```
 
 ### Headless CLI and MCP
@@ -144,8 +144,10 @@ eide-cli build \
   --toolchain-path ./gcc
 ```
 
-The commands are `build`, `rebuild`, `clean`, `plan`, and `flash`. `plan` and
-`build --dry-run` produce the build plan without compiling; `flash --dry-run`
+The commands are `create`, `build`, `rebuild`, `clean`, `plan`, and `flash`.
+`eide-cli create --name firmware --template stm32f1xx_gcc` creates a build-ready
+project from a built-in template. `plan` and `build --dry-run` produce the build
+plan without compiling; `flash --dry-run`
 prints the flash command without touching hardware. Results are emitted as one
 JSON object on stdout; logs go to stderr. See
 [docs/headless.md](./docs/headless.md) for the full option list, exit codes,
