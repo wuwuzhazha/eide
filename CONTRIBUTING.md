@@ -16,7 +16,7 @@ the repository URL listed in `README.md`.
 Requirements: Node.js 18 and the `lib/node-utility` submodule.
 
 ```bash
-git clone --recursive <repository-url>
+git clone --recursive https://github.com/wuwuzhazha/eide-pro.git
 cd eide-pro
 npm install
 npm test

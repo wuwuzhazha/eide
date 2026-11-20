@@ -26,10 +26,12 @@ A clear and concise description of what you expected to happen.
 **Screenshots**
 If applicable, add screenshots to help explain your problem.
 
-**Desktop (please complete the following information):**
- - OS: [e.g. Windows 10 xxx]
- - EIDE Version [e.g. v3.8.3]
- - VSCode Version [e.g. v1.68.1]
+**Environment (please complete the following information):**
+ - OS: [e.g. Windows 11, Ubuntu 24.04, macOS 14]
+ - EIDE Pro version: [e.g. v4.0.2]
+ - Editor and version: [e.g. VS Code 1.89, VSCodium 1.90]
+ - Build mode: [VS Code extension, `eide-cli`, or `eide-mcp`]
 
 **Additional context**
-some logs, like: `<user_home>/.eide/cl.eide.log`
+Attach relevant logs, such as `<user_home>/.eide/cl.eide.log`, and redact
+credentials or private paths.
