@@ -6,6 +6,23 @@ All notable version changes will be recorded in this file.
 
 ***
 
+### [v4.1.0]
+
+**New**:
+  - Added `eide-pro-headless-<version>.tgz`, a standalone npm package containing `eide-cli`, `eide-mcp`, toolchain models, builder binaries, and required resources. It installs and runs without VS Code.
+  - `eide-cli` and `eide-mcp` now default `--resources` to the bundled `res` directory; the flag remains available as an override.
+  - Added an installed-package E2E test that builds a Cortex-M fixture with a real `arm-none-eabi-gcc` and verifies the MCP stdio handshake.
+
+**Changes**:
+  - Headless startup adds execute permissions to bundled builder tools on Linux and macOS when the package is installed without them.
+  - CI adds a dedicated headless-package E2E job on Ubuntu with the ARM GNU toolchain.
+  - Release workflows publish the headless npm tarball alongside the VSIX and skill archive.
+
+**Docs**:
+  - Documented standalone headless installation and removed the requirement to pass `--resources` in normal usage.
+
+***
+
 ### [v4.0.2]
 
 **New**:

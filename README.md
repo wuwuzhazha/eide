@@ -71,8 +71,23 @@ it from the command line or with **Extensions: Install from VSIX...** in VS
 Code:
 
 ```bash
-code --install-extension ./eide-pro-4.0.2.vsix
+code --install-extension ./eide-pro-4.1.0.vsix
 ```
+
+### Headless CLI and MCP
+
+Download `eide-pro-headless-<version>.tgz` from
+[GitHub Releases](https://github.com/wuwuzhazha/eide-pro/releases) and install it
+globally:
+
+```bash
+npm install -g ./eide-pro-headless-<version>.tgz
+```
+
+This installs the `eide-cli` and `eide-mcp` commands without requiring VS Code.
+The package bundles the toolchain models, builder binaries, and resources; the
+host needs Node.js 18+ and a .NET 6+ runtime. See the
+[Headless CLI and MCP guide](./docs/headless.md).
 
 ### Build from source
 
@@ -121,13 +136,11 @@ overrides, and xpack-managed toolchains.
 
 ### CLI
 
-Build a project after `npm run webpack:headless`, or from a packaged
-extension:
+Build a project with the installed package:
 
 ```bash
-node dist/eide_cli.js build \
+eide-cli build \
   --project ./firmware \
-  --resources ./res \
   --toolchain-path ./gcc
 ```
 
@@ -139,14 +152,14 @@ JSON object on stdout; logs go to stderr. See
 build result fields, and flash options.
 
 The standalone bundles are `dist/eide_cli.js` and `dist/eide_mcp.js`; their
-package bin names are `eide-cli` and `eide-mcp`.
+package bin names are `eide-cli` and `eide-mcp`. Use `node dist/...` when
+running directly from a development tree.
 
 ### MCP
 
 ```bash
-node dist/eide_mcp.js \
+eide-mcp \
   --project ./firmware \
-  --resources ./res \
   --toolchain-path ./gcc
 ```
 
@@ -210,7 +223,8 @@ from upstream EIDE.
 | `src/mcp/` | `eide-mcp` entry (`src/mcp/eide_mcp.ts`), stdio server, tools, and GDB integration |
 | `src/html/` | Webview assets, including the callgraph view |
 | `res/` | Templates, toolchain metadata, bundled tools, and icons |
-| `test/` | Test runner and test scripts |
+| `test/` | Test runner, test scripts, and the installed-package E2E fixture |
+| `scripts/` | Release and headless packaging scripts |
 | `docs/` | Headless CLI/MCP and agent-skill documentation |
 | `lib/node-utility/` | Shared utility submodule |
 
@@ -230,10 +244,15 @@ parsing.
 Focused commands:
 
 ```bash
-npm run compile           # Compile src with tsc
-npm run webpack           # Build the extension in development mode
-npm run webpack:headless  # Build dist/eide_cli.js and dist/eide_mcp.js
+npm run compile             # Compile src with tsc
+npm run webpack             # Build the extension in development mode
+npm run webpack:headless    # Build dist/eide_cli.js and dist/eide_mcp.js
+npm run package:headless    # Build artifacts/eide-pro-headless-<version>.tgz
+npm run test:headless-package  # Install the tarball, build the Cortex-M fixture, and open MCP
 ```
+
+The installed-package E2E requires an ARM GCC installation (`ARM_GCC_ROOT`,
+default `/usr`) and a .NET 6+ runtime.
 
 ## Contributing
 

@@ -19,7 +19,7 @@ groups, env.ini expansion, and virtual source folders.
 | Mode | How it is configured | Requires VS Code | Tools |
 |------|----------------------|------------------|-------|
 | VS Code HTTP MCP | `http://localhost:8940/mcp` plus `EIDE.MCP.Server.Enable` | Yes, with the project open | 21 project/build tools |
-| Headless stdio MCP | `eide-mcp` or `node dist/eide_mcp.js --project ...` | No | 35 tools, including 14 debug tools |
+| Headless stdio MCP | `eide-mcp --project ...` from the headless package | No | 35 tools, including 14 debug tools |
 
 If `eide_debug_*` tools are present, it is the headless server. The headless
 server discovers its projects from launch arguments, so there is no "add
@@ -31,16 +31,20 @@ Headless launch:
 {
   "mcpServers": {
     "eide-headless": {
-      "command": "node",
+      "command": "eide-mcp",
       "args": [
-        "/path/to/eide-pro/dist/eide_mcp.js",
         "--project", "/path/to/firmware",
-        "--resources", "/path/to/eide-pro/res",
         "--toolchain-path", "/opt/gcc-arm-none-eabi"
       ]
     }
   }
 }
+```
+
+Install the standalone package from a GitHub Release:
+
+```bash
+npm install -g ./eide-pro-headless-<version>.tgz
 ```
 
 Useful headless options: repeatable `--project`, `--target`, `--settings`
@@ -302,7 +306,7 @@ eide_debug_disconnect(uid)
 | `gcc is not available from xpack` | Run `xpm install` in the project directory, or stop using the xpack path. |
 | `Builder options schema not found` | The extension `lang` directory is incomplete or the active toolchain has no schema file. Reinstall the extension or verify `lang/<toolchain>.verify.json`. |
 | VS Code MCP connection refused | VS Code is not running or the project is not open; check `EIDE.MCP.Server.Enable` and port 8940. |
-| Headless MCP process exits | Read the server's stderr; usually invalid `--project`, `--resources`, or project config. |
+| Headless MCP process exits | Read the server's stderr; usually invalid `--project`, bundled resources, or project config. |
 | `A debug session is already active` | Call `eide_debug_disconnect` before connecting again. |
 | Stack/callgraph data missing | Rebuild with `-fstack-usage` / `-fcallgraph-info`. |
 | Path rejected by a config setter | The path resolves outside the project root; add the file/folder inside the project or use a build override. |

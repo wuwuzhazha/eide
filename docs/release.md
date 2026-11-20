@@ -1,6 +1,6 @@
 # Release
 
-Releases are cut from tags named `v<version>`, for example `v4.0.2`. The tag
+Releases are cut from tags named `v<version>`, for example `v4.1.0`. The tag
 version must equal the `version` field in `package.json`; the workflow stops
 before installing dependencies when they differ.
 
@@ -41,6 +41,8 @@ The tag push starts `.github/workflows/release.yml`.
 - A GitHub Release for the tag containing:
   - `eide-pro-<version>.vsix`, built with `npm run vscode:prepublish` and
     packaged by the pinned `@vscode/vsce@2.15.0`.
+  - `eide-pro-headless-<version>.tgz`, the standalone `eide-cli`/`eide-mcp`
+    package built by `npm run package:headless`.
   - `eide-mcp-tools-skill.zip`, containing `eide-mcp-tools/SKILL.md` at the
     archive root, so extracting it into an agent skills directory produces
     `<skills>/eide-mcp-tools/SKILL.md`.

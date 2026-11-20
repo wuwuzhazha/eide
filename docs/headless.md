@@ -7,10 +7,26 @@ matches VS Code: all project types, all registered toolchains, `.eide/env.ini`,
 virtual source folders, dependency groups, per-file options, and builder
 settings are supported.
 
+## Install
+
+Download `eide-pro-headless-<version>.tgz` from
+[GitHub Releases](https://github.com/wuwuzhazha/eide-pro/releases), then install it
+globally:
+
+```bash
+npm install -g ./eide-pro-headless-<version>.tgz
+```
+
+The package contains `eide-cli`, `eide-mcp`, the toolchain models, and the
+builder binaries for Windows x64, Linux x64, and macOS. It does not require VS
+Code. `--resources` defaults to the bundled `res` directory; pass it explicitly
+only when using a separate extension installation or a development tree.
+
 ## Requirements
 
 - Node.js 18+
-- EIDE resources directory (`res`) and the toolchain configured for the target
+- .NET 6+ runtime (the bundled builder is framework-dependent)
+- A toolchain installed and configured for the target
 - A project initialized by EIDE (`miscInfo.uid` is present in `.eide/eide.yml`)
 - `--project` points at the directory containing `.eide/eide.yml`
 
@@ -21,7 +37,6 @@ Build (incremental):
 ```bash
 eide-cli build \
   --project ./firmware \
-  --resources /opt/eide/res \
   --toolchain-path /opt/gcc-arm-none-eabi
 ```
 
@@ -30,7 +45,6 @@ Rebuild with per-invocation parameters:
 ```bash
 eide-cli build \
   --project ./firmware \
-  --resources ./res \
   --toolchain-path "C:/Program Files (x86)/GNU Arm Embedded Toolchain/10 2021.10" \
   --mode rebuild \
   -D FEATURE_LOG=1 \
@@ -41,7 +55,7 @@ eide-cli build \
 Generate the build plan without compiling:
 
 ```bash
-eide-cli plan --project ./firmware --resources ./res --toolchain-path ./gcc
+eide-cli plan --project ./firmware --toolchain-path ./gcc
 ```
 
 Clean the target output directory:
@@ -77,7 +91,7 @@ Options:
 | `-D, --define <NAME[=VAL]>` | Extra preprocessor define (repeatable) |
 | `--include`, `--lib` | Extra include/library directory (repeatable) |
 | `--cflag`, `--cxxflag`, `--asmflag`, `--ldflag` | Extra compiler/linker flags (repeatable) |
-| `--resources <dir>` | EIDE `res` directory (required for build/plan) |
+| `--resources <dir>` | EIDE `res` directory (default: bundled package `res`) |
 | `--extension-root <dir>` | Extension root containing `package.json` and `res` (default: parent of `--resources`) |
 | `--settings <file>` | JSON file with `EIDE.*` settings overrides, merged after `.code-workspace` settings |
 | `--toolchain-path <dir>` | Toolchain installation directory (see below) |
@@ -119,9 +133,8 @@ Build results contain `success`, `stage`, `problems`, `memory`, `artifacts`,
 directly to clangd or other language servers.
 
 The repository builds standalone entry scripts at `dist/eide_cli.js` and
-`dist/eide_mcp.js` (`npm run webpack:headless`). Use `node dist/eide_cli.js`
-and `node dist/eide_mcp.js` when running from a packaged extension. The MCP
-bundle resolves `x2js` from the extension's `node_modules`.
+`dist/eide_mcp.js` (`npm run webpack:headless`). The release package exposes the
+same bundles as `eide-cli` and `eide-mcp`.
 
 ## Build parity
 
@@ -150,7 +163,6 @@ extension's project loader and builder:
 ```bash
 eide-mcp \
   --project ./firmware \
-  --resources ./res \
   --toolchain-path ./gcc \
   --gdb ./gcc/bin/arm-none-eabi-gdb \
   --flasher-exe ./JLink.exe
@@ -162,11 +174,9 @@ MCP configuration example:
 {
   "mcpServers": {
     "eide-headless": {
-      "command": "node",
+      "command": "eide-mcp",
       "args": [
-        "/path/to/eide/dist/eide_mcp.js",
         "--project", "/path/to/firmware",
-        "--resources", "/path/to/eide/res",
         "--toolchain-path", "/path/to/gcc",
         "--gdb", "/path/to/gcc/bin/arm-none-eabi-gdb"
       ]
