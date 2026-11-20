@@ -84,7 +84,7 @@ Useful headless options: repeatable `--project`, `--target`, `--settings`
 | `eide_build` | `uid`, `overrides?`, `dryRun?` | Incremental unless overrides are supplied. |
 | `eide_rebuild` | `uid`, `overrides?`, `dryRun?` | Full rebuild. |
 | `eide_clean` | `uid` | Removes the target output directory. |
-| `eide_flash` | `uid`, `eraseAll` (required boolean) | Uses the project's uploader and configured flasher. |
+| `eide_flash` | `uid`, `eraseAll` (required boolean); headless also accepts `artifact?`, `verify?`, `dryRun?` | Uses the project's uploader and configured flasher. |
 | `eide_reload` | `uid` | Useful in VS Code mode; no-op in headless mode. |
 
 Typical loop:
@@ -93,6 +93,12 @@ Typical loop:
 eide_build(uid)                 → inspect success/problems/logTail
 eide_flash(uid, eraseAll=false) → only after a successful build
 ```
+
+Headless flash accepts `artifact` (one or more `path[,address]` entries
+separated by `;`), `verify`, and `dryRun`. `dryRun=true` returns
+`{ uploader, command, request }` without touching hardware but still requires
+the configured flasher executable. `artifact` cannot be combined with
+`eraseAll=true`.
 
 A non-dry-run build returns JSON with `success`, `stage`, `problems`,
 `memory`, `artifacts`, `compileCommands` (when generated), `effectiveConfig`,
@@ -184,10 +190,10 @@ All of these require `uid`.
 the merged dependency lists. Dependencies and build-in values still participate
 in the build automatically.
 
-If the builder-options schema tool is unavailable, `eide_get_builder_opts`
-still shows the current structure. Headless MCP currently exposes builder-option
-schema validation for GCC projects only; use VS Code MCP to edit builder options
-for other toolchains.
+Headless and VS Code MCP both resolve the builder-options schema from the
+project's active toolchain in the extension `lang` directory. `eide_set_builder_opts`
+validates against that schema before saving, so read the schema first and send
+the complete options object.
 
 ## 5. Build analysis
 
@@ -294,7 +300,7 @@ eide_debug_disconnect(uid)
 | `Not such project (uid=...)` | UID mismatch, or multiple headless projects and the UID belongs to another project. Re-read `miscInfo.uid`. |
 | `Toolchain 'X' is not installed or its path is not configured` | Pass `--toolchain-path` or `--settings` to headless, or configure the toolchain in VS Code. |
 | `gcc is not available from xpack` | Run `xpm install` in the project directory, or stop using the xpack path. |
-| `Builder options schema not found` or `Builder options are not available` | The `lang` schema directory is missing, or the toolchain is not GCC in headless mode. Use `eide_get_builder_opts` to inspect, or edit options in VS Code for other toolchains. |
+| `Builder options schema not found` | The extension `lang` directory is incomplete or the active toolchain has no schema file. Reinstall the extension or verify `lang/<toolchain>.verify.json`. |
 | VS Code MCP connection refused | VS Code is not running or the project is not open; check `EIDE.MCP.Server.Enable` and port 8940. |
 | Headless MCP process exits | Read the server's stderr; usually invalid `--project`, `--resources`, or project config. |
 | `A debug session is already active` | Call `eide_debug_disconnect` before connecting again. |

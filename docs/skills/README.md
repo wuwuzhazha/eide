@@ -8,8 +8,8 @@ stack/callgraph queries, and GDB debugging.
 
 - Direct file:
   https://raw.githubusercontent.com/wuwuzhazha/eide-pro/dev/docs/skills/eide-mcp-tools/SKILL.md
-- Release archive:
-  https://github.com/wuwuzhazha/eide-pro/releases/download/v4.0.1/eide-mcp-tools-skill.zip
+- Release archive (latest):
+  https://github.com/wuwuzhazha/eide-pro/releases/latest/download/eide-mcp-tools-skill.zip
 - Repository clone:
   `git clone --depth 1 -b dev https://github.com/wuwuzhazha/eide-pro.git`
 

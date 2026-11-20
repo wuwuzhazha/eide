@@ -178,7 +178,9 @@ MCP configuration example:
 The server exposes the same project/build tools as the VS Code MCP server:
 
 - build/rebuild (with `overrides` and `dryRun`), clean, flash
+- flash accepts the same `artifact`, `verify`, and `dryRun` inputs as the CLI
 - targets, source dirs, include dirs, defines, builder options
+- builder-options schema and validation for every registered toolchain
 - stack usage and callgraph from `statistic.json`
 
 It additionally exposes debug tools, backed by GDB/MI:
@@ -199,4 +201,6 @@ Tool calls are serialized. A debug session stays active until
 - Flash support covers JLink, OpenOCD, pyOCD, STLink, and probe-rs.
   STVP, stcgal, and custom command uploaders fail explicitly.
 - `eide_debug_svd_lookup` supports the SVD subset implemented in
-  `src/core/debug/svd.ts` (no enumerated values or inherited access).
+  `src/core/debug/svd.ts`: peripheral/register/field `derivedFrom`, dimensions,
+  address lookup, and field bit ranges. Enumerated values, clusters, and
+  alternate register groups are not modeled.

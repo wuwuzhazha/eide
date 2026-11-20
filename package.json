@@ -39,7 +39,7 @@
     "homepage": "https://github.com/wuwuzhazha/eide-pro",
     "license": "MIT",
     "description": "EIDE Pro: embedded IDE with headless CLI/MCP for 8051/STM8/Cortex-M/MIPS/RISC-V",
-    "version": "4.0.1",
+    "version": "4.0.2",
     "preview": false,
     "engines": {
         "vscode": "^1.89.0"
@@ -61,10 +61,10 @@
     ],
     "icon": "res/icon/icon.png",
     "main": "./dist/extension.js",
-	"bin": {
-		"eide-cli": "./dist/eide_cli.js",
-		"eide-mcp": "./dist/eide_mcp.js"
-	},
+    "bin": {
+        "eide-cli": "./dist/eide_cli.js",
+        "eide-mcp": "./dist/eide_mcp.js"
+    },
     "readme": "https://github.com/wuwuzhazha/eide-pro#readme",
     "bugs": {
         "url": "https://github.com/wuwuzhazha/eide-pro/issues",
@@ -77,7 +77,7 @@
     "scripts": {
         "vscode:prepublish": "webpack --mode production && webpack --config webpack.headless.config.js",
         "webpack": "webpack --mode development",
-		"webpack:headless": "webpack --config webpack.headless.config.js",
+        "webpack:headless": "webpack --config webpack.headless.config.js",
         "compile": "tsc -p ./",
         "compile:test": "tsc -p test",
         "watch": "tsc -watch -p ./",

@@ -8,7 +8,7 @@ RISC-V, MIPS, and arbitrary GCC targets; builds them with their native
 toolchains; flashes devices through supported uploaders; and exposes the same
 project and build model through a CLI and MCP server.
 
-[![Repository](https://img.shields.io/badge/repo-qxzurfru%2Feide-pro-blue)](https://github.com/wuwuzhazha/eide-pro)
+[![Repository](https://img.shields.io/badge/repo-wuwuzhazha%2Feide-pro-blue)](https://github.com/wuwuzhazha/eide-pro)
 [![Release](https://img.shields.io/github/v/release/wuwuzhazha/eide-pro)](https://github.com/wuwuzhazha/eide-pro/releases)
 [![Open VSX](https://img.shields.io/open-vsx/v/wuwuzhazha/eide-pro)](https://open-vsx.org/extension/wuwuzhazha/eide-pro)
 [![License](https://img.shields.io/github/license/wuwuzhazha/eide-pro)](./LICENSE)
@@ -71,7 +71,7 @@ it from the command line or with **Extensions: Install from VSIX...** in VS
 Code:
 
 ```bash
-code --install-extension ./eide-pro-4.0.1.vsix
+code --install-extension ./eide-pro-4.0.2.vsix
 ```
 
 ### Build from source
@@ -153,9 +153,9 @@ node dist/eide_mcp.js \
 The stdio server exposes project build/rebuild, clean, flash,
 target/source/include configuration, stack usage, and callgraph tools. When
 started with `--gdb`, it also exposes GDB-backed tools for connecting, reading
-registers and memory, setting breakpoints, continuing and interrupting
-execution, evaluating expressions, decoding Cortex-M faults, and looking up SVD
-symbols.
+registers and memory, setting and listing breakpoints, backtraces, continuing
+and interrupting execution, evaluating expressions, decoding Cortex-M faults,
+and looking up SVD symbols (including `derivedFrom` inheritance).
 
 VS Code also exposes an HTTP MCP server. Enable it with
 `EIDE.MCP.Server.Enable` and set the port with `EIDE.MCP.Server.Port` (default

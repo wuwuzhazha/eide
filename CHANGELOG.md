@@ -6,6 +6,27 @@ All notable version changes will be recorded in this file.
 
 ***
 
+### [v4.0.2]
+
+**New**:
+  - `Headless MCP`: `eide_flash` now accepts `artifact`, `verify`, and `dryRun`; dry-run returns the uploader, planned command, and request without touching hardware.
+  - `Headless MCP`: added `eide_debug_backtrace` and `eide_debug_list_breakpoints`.
+  - `Debug`: SVD lookup now resolves peripheral, register, and field `derivedFrom` inheritance, with cycle and missing-target detection.
+  - `CI`: added a Windows/Linux/macOS test and build matrix, plus tag-triggered GitHub Release and Open VSX publishing.
+
+**Changes**:
+  - `Headless`: builder-options schema, read, and write now use the loaded EIDE project/toolchain for every registered toolchain instead of a GCC-only mapping.
+  - `Headless`: `eide_clean` uses the full EIDE project model and removes the resolved output directory.
+  - `Project lifecycle`: closing a project now cancels pending save and Cpptools refresh timers.
+  - `Packaging`: webpack bundles runtime dependencies and `node_modules` is excluded from the VSIX, reducing the package from 34.3 MB / 5,808 files to 27.0 MB / 401 files.
+  - Removed the redundant headless `--schema-dir` option; schemas come from the extension `lang` directory.
+
+**Docs**:
+  - Rewrote the English and Chinese READMEs for EIDE Pro, including install channels, headless CLI/MCP usage, supported toolchains, architecture, verification, and licensing.
+  - Documented release automation and the `OPEN_VSX_PAT` secret.
+
+***
+
 ### [v4.0.1]
 
 **New**:
