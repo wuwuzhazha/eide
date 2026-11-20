@@ -8,6 +8,7 @@ import { NodeProcessRunner } from '../core/process_runner';
 import { loadProjectSnapshot } from '../core/project_snapshot';
 import { BuildRequest } from '../core/types';
 import { bundledResourcesDir } from '../headless/package_paths';
+import { createProject } from '../headless/project_creator';
 import { CliOptions, CliUsageError, cliHelp, parseCliArgs } from './args';
 
 export interface CliIo {
@@ -53,6 +54,18 @@ export async function main(argv: string[], io: CliIo = processIo): Promise<numbe
         const parsed = parseCliArgs(argv);
         if (parsed.kind === 'help') {
             io.stdout(cliHelp + '\n');
+            return 0;
+        }
+        if (parsed.kind === 'create') {
+            command = 'create';
+            const result = createProject({
+                name: parsed.options.name,
+                outputDir: parsed.options.outputDir,
+                template: parsed.options.template,
+                resourcesDir: parsed.options.resourcesDir ?? bundledResourcesDir(),
+                projectName: parsed.options.projectName
+            });
+            writeJson(io, result);
             return 0;
         }
         const options = parsed.options;

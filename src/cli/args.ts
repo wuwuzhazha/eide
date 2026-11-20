@@ -1,6 +1,6 @@
 import { BuildMode, BuildOverrides } from '../core/types';
 
-export type CliCommandName = 'build' | 'rebuild' | 'clean' | 'plan' | 'flash';
+export type CliCommandName = 'build' | 'rebuild' | 'clean' | 'plan' | 'flash' | 'create';
 
 export interface CliOptions {
     command: CliCommandName;
@@ -22,7 +22,19 @@ export interface CliOptions {
     artifact?: string;
 }
 
-export type ParsedCli = { kind: 'help' } | { kind: 'run'; options: CliOptions };
+export interface CreateCliOptions {
+    command: 'create';
+    name: string;
+    outputDir: string;
+    template: string;
+    resourcesDir?: string;
+    projectName?: string;
+}
+
+export type ParsedCli =
+    | { kind: 'help' }
+    | { kind: 'run'; options: CliOptions }
+    | { kind: 'create'; options: CreateCliOptions };
 
 export const DEFAULT_BUILD_TIMEOUT_MS = 30 * 60 * 1000;
 export const DEFAULT_FLASH_TIMEOUT_MS = 2 * 60 * 1000;
@@ -35,9 +47,11 @@ export class CliUsageError extends Error {
 }
 
 export const cliHelp = [
-    'Usage: eide-cli <build|rebuild|clean|plan|flash> --project <path> [options]',
+    'Usage:',
+    '  eide-cli <build|rebuild|clean|plan|flash> --project <path> [options]',
+    '  eide-cli create --name <name> --template <template> [--output <dir>]',
     '',
-    'Options:',
+    'Build/flash options:',
     '  -p, --project <path>         Project root directory (required)',
     '      --workspace <file>       .code-workspace file',
     '  -t, --target <name>          Build target (defaults to project active target)',
@@ -61,6 +75,12 @@ export const cliHelp = [
     '      --verify                 Verify after flashing (default for capable tools)',
     '      --no-verify              Skip post-flash verification when optional',
     '      --artifact <path[,addr]> Override the flash artifact (default: project output)',
+    '',
+    'Create options:',
+    '      --name <name>            New project folder name',
+    '      --template <name>        Built-in template name (see docs/headless.md)',
+    '      --output <dir>           Parent directory for the new project (default: .)',
+    '      --project-name <name>    Display name (default: --name)',
     '  -h, --help                   Show this help'
 ].join('\n');
 
@@ -80,6 +100,55 @@ function appendFlag(current: string | undefined, value: string): string {
     return current && current.length > 0 ? `${current} ${trimmed}` : trimmed;
 }
 
+function parseCreateArgs(argv: string[]): ParsedCli {
+    let name: string | undefined;
+    let template: string | undefined;
+    let outputDir = '.';
+    let resourcesDir: string | undefined;
+    let projectName: string | undefined;
+
+    for (let i = 1; i < argv.length; i++) {
+        const arg = argv[i];
+        switch (arg) {
+            case '-h':
+            case '--help':
+                return { kind: 'help' };
+            case '--name':
+                name = readValue(argv, i, arg);
+                i++;
+                break;
+            case '--template':
+                template = readValue(argv, i, arg);
+                i++;
+                break;
+            case '--output':
+                outputDir = readValue(argv, i, arg);
+                i++;
+                break;
+            case '--resources':
+                resourcesDir = readValue(argv, i, arg);
+                i++;
+                break;
+            case '--project-name':
+                projectName = readValue(argv, i, arg);
+                i++;
+                break;
+            default:
+                throw new CliUsageError(`Unknown option: ${arg}`);
+        }
+    }
+    if (!name) {
+        throw new CliUsageError('Missing required option: --name');
+    }
+    if (!template) {
+        throw new CliUsageError('Missing required option: --template');
+    }
+    return {
+        kind: 'create',
+        options: { command: 'create', name, template, outputDir, resourcesDir, projectName }
+    };
+}
+
 export function parseCliArgs(argv: string[]): ParsedCli {
     if (argv.length === 0) {
         throw new CliUsageError('Missing command.');
@@ -88,8 +157,11 @@ export function parseCliArgs(argv: string[]): ParsedCli {
         return { kind: 'help' };
     }
     const command = argv[0] as CliCommandName;
-    if (!['build', 'rebuild', 'clean', 'plan', 'flash'].includes(command)) {
+    if (!['build', 'rebuild', 'clean', 'plan', 'flash', 'create'].includes(command)) {
         throw new CliUsageError(`Unknown command: ${command}`);
+    }
+    if (command === 'create') {
+        return parseCreateArgs(argv);
     }
 
     const overrides: BuildOverrides = {};
