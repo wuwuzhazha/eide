@@ -72,6 +72,11 @@ jobs:
             exit 1
           fi
 
+      - name: Setup Node.js 22 for VSIX packaging
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22
+
       - name: Package VSIX
         env:
           VERSION: ${{ steps.version.outputs.version }}
@@ -99,11 +104,6 @@ jobs:
           fail_on_unmatched_files: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Setup Node.js 22 for Open VSX CLI
-        uses: actions/setup-node@v5
-        with:
-          node-version: 22
 
       - name: Publish to Open VSX
         env:
