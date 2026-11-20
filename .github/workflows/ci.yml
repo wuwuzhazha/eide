@@ -50,3 +50,41 @@ jobs:
             echo "::error::Missing build artifacts: ${missing[*]}"
             exit 1
           fi
+
+  headless-package:
+    name: Headless package E2E
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Init submodules
+        run: git -c url."https://github.com/".insteadOf="git@github.com:" submodule update --init --recursive
+
+      - name: Setup Node.js 18
+        uses: actions/setup-node@v5
+        with:
+          node-version: 18
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Setup .NET runtime
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Install ARM GNU toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-arm-none-eabi
+
+      - name: Build extension and headless bundles
+        run: npm run vscode:prepublish
+
+      - name: Package headless distribution
+        run: npm run package:headless
+
+      - name: Run installed-package E2E
+        run: npm run test:headless-package
