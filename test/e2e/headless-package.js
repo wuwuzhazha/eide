@@ -105,6 +105,29 @@ async function main() {
         const elf = (result.artifacts || []).find(file => file.endsWith('.elf'));
         assert(typeof elf === 'string' && fs.existsSync(elf), 'installed eide-cli produces an ELF');
 
+        const createParent = path.join(workspace, 'created');
+        fs.mkdirSync(createParent);
+        const create = runNode([
+            cli, 'create', '--name', 'from-template', '--template', 'stm32f1xx_gcc',
+            '--output', createParent, '--project-name', 'from-template'
+        ], workspace);
+        assert(create.status === 0, `installed eide-cli creates a project\n${create.stderr}`);
+        const created = JSON.parse(create.stdout);
+        assert(created.success === true && created.type === 'ARM',
+            'installed eide-cli create returns project metadata');
+        const createdConfig = path.join(created.projectPath, '.eide', 'eide.yml');
+        assert(fs.existsSync(createdConfig), 'installed eide-cli create writes eide.yml');
+        const createBuild = runNode([
+            cli, 'build', '--project', created.projectPath, '--toolchain-path', toolchainRoot,
+            '--timeout', '120000'
+        ], workspace);
+        assert(createBuild.status === 0,
+            `installed eide-cli builds a created project\n${createBuild.stderr}`);
+        const createResult = JSON.parse(createBuild.stdout);
+        assert(createResult.success === true, 'created project builds successfully');
+        assert((createResult.artifacts || []).some(file => file.endsWith('.elf')),
+            'created project produces an ELF');
+
         await verifyMcp(mcp, project, workspace);
     } finally {
         fs.rmSync(workspace, { recursive: true, force: true });
