@@ -6,6 +6,17 @@ All notable version changes will be recorded in this file.
 
 ***
 
+### [v4.3.0]
+
+**New**:
+  - Added `eide-cli create` to create a build-ready project from any built-in EIDE template without VS Code. The command migrates the template config to the current version, assigns a fresh `miscInfo.uid`, renames the workspace file, and removes stale user context.
+  - Extracted the project-config migration into `src/core/project_config_migration.ts`, shared by the VS Code migration path and headless project creation.
+
+**Docs**:
+  - Documented `eide-cli create`, available templates, and its options in the headless guide and both READMEs.
+
+***
+
 ### [v4.2.0]
 
 **New**:

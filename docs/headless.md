@@ -32,6 +32,27 @@ only when using a separate extension installation or a development tree.
 
 ## CLI
 
+Create a project from a built-in template:
+
+```bash
+eide-cli create --name firmware --template stm32f1xx_gcc --output ./projects
+```
+
+The created directory contains a migrated `.eide/eide.yml` at the current
+config version, a fresh `miscInfo.uid`, and a renamed `.code-workspace`. It is
+ready for `eide-cli build` without opening VS Code. Available templates:
+
+| Template | Type |
+| --- | --- |
+| `stm32f1xx_gcc` | ARM (STM32F103, GCC) |
+| `gd32vf103_riscv` | RISC-V |
+| `mcs51_sdcc`, `stc15_sdcc` | 8051 (SDCC) |
+| `stm8_cosmic_empty`, `stm8s_cosmic`, `stm8s_sdcc` | STM8 |
+| `avr_atmega128_rtos` | ANY-GCC (AVR) |
+
+`--project-name` overrides the display name; `--output` defaults to the current
+directory. `--resources` defaults to the bundled package resources.
+
 Build (incremental):
 
 ```bash
@@ -102,7 +123,11 @@ Options:
 | `--verify`, `--no-verify` | Force or skip verification where the tool allows it |
 | `--artifact <path[,addr]>` | Override the programmed artifact |
 
-All commands print one JSON object to stdout. Logs go to stderr.
+All commands print one JSON object to stdout. Logs go to stderr. `create` has
+its own options (`--name`, `--template`, `--output`, `--project-name`) and does
+not use the build options above. Exit code `3` covers invalid invocations and
+project configuration, including unknown templates and existing output
+directories.
 
 `--toolchain-path` is mapped to the toolchain's normal `EIDE.*` install setting:
 the toolchain root for most compilers (the executable folder is derived as

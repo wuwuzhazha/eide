@@ -64,7 +64,7 @@ Open VSX 的编辑器（例如 VSCodium 或 code-server）中执行该命令。�
 **Extensions: Install from VSIX...** 安装：
 
 ```bash
-code --install-extension ./eide-pro-4.2.0.vsix
+code --install-extension ./eide-pro-4.3.0.vsix
 ```
 
 ### Headless CLI 与 MCP
@@ -129,8 +129,10 @@ eide-cli build \
   --toolchain-path ./gcc
 ```
 
-命令包括 `build`、`rebuild`、`clean`、`plan` 和 `flash`。`plan` 与
-`build --dry-run` 只生成构建计划而不执行编译；`flash --dry-run` 只打印烧录命令
+命令包括 `create`、`build`、`rebuild`、`clean`、`plan` 和 `flash`。
+`eide-cli create --name firmware --template stm32f1xx_gcc` 可从内置模板创建
+可直接构建的工程。`plan` 与 `build --dry-run` 只生成构建计划而不执行编译；
+`flash --dry-run` 只打印烧录命令
 而不访问硬件。结果以一个 JSON 对象输出到 stdout；日志输出到 stderr。完整选项、
 退出码、构建结果字段和烧录选项见 [docs/headless.md](./docs/headless.md)。
 
