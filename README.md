@@ -237,11 +237,9 @@ npm run webpack:headless  # Build dist/eide_cli.js and dist/eide_mcp.js
 
 ## Contributing
 
-Open issues and pull requests at
-[wuwuzhazha/eide-pro](https://github.com/wuwuzhazha/eide-pro/issues). The repository
-default branch is `dev`; target it for pull requests. Keep each change focused,
-explain the behavior it changes, and include the commands and results used to
-verify it.
+See [CONTRIBUTING.md](./CONTRIBUTING.md) for the branch, testing, and pull
+request workflow. Report security issues privately as described in
+[SECURITY.md](./SECURITY.md).
 
 ## License
 
@@ -251,6 +249,8 @@ license texts are in [licenses](./licenses).
 
 ## Links
 
+- [Contributing](./CONTRIBUTING.md)
+- [Security policy](./SECURITY.md)
 - [Changelog](./CHANGELOG.md)
 - [Headless CLI and MCP guide](./docs/headless.md)
 - [EIDE MCP skill](./docs/skills/README.md)
