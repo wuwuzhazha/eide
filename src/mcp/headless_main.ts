@@ -1,5 +1,4 @@
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
-import * as NodePath from 'path';
 import { NodeProcessRunner } from '../core/process_runner';
 import { StderrLogger } from '../core/logger';
 import { createHeadlessToolExecutor, HeadlessToolOptions } from './headless_tools';
@@ -18,7 +17,6 @@ const usage = [
     '      --extension-root <dir> Extension root (default: parent of --resources)',
     '      --toolchain-path <dir> Toolchain installation directory (optional with xpack)',
     '      --settings <file>     JSON file with EIDE.* settings overrides',
-    '      --schema-dir <dir>    Builder options JSON schema directory (default: <resources>/../lang)',
     '      --flasher-exe <path>  Flash tool executable',
     '      --gdb <path>          GDB executable (default: arm-none-eabi-gdb)',
     '      --build-timeout <ms>  Build timeout (default: 1800000)',
@@ -55,7 +53,6 @@ interface ServerArguments {
     resourcesDir: string;
     extensionRoot?: string;
     toolchainPath?: string;
-    schemaDir: string;
     settingsFile?: string;
     flasherExecutable?: string;
     gdbPath?: string;
@@ -70,7 +67,6 @@ function parseArguments(argv: string[]): ServerArguments | undefined {
     let extensionRoot: string | undefined;
     let toolchainPath: string | undefined;
     let settingsFile: string | undefined;
-    let schemaDir: string | undefined;
     let flasherExecutable: string | undefined;
     let gdbPath: string | undefined;
     let buildTimeoutMs = DEFAULT_BUILD_TIMEOUT_MS;
@@ -108,10 +104,6 @@ function parseArguments(argv: string[]): ServerArguments | undefined {
                 settingsFile = readValue(argv, i, arg);
                 i++;
                 break;
-            case '--schema-dir':
-                schemaDir = readValue(argv, i, arg);
-                i++;
-                break;
             case '--flasher-exe':
                 flasherExecutable = readValue(argv, i, arg);
                 i++;
@@ -145,7 +137,6 @@ function parseArguments(argv: string[]): ServerArguments | undefined {
         resourcesDir,
         extensionRoot,
         toolchainPath,
-        schemaDir: schemaDir ?? NodePath.resolve(resourcesDir, '..', 'lang'),
         settingsFile,
         flasherExecutable,
         gdbPath,
@@ -172,7 +163,8 @@ export async function main(argv: string[]): Promise<number> {
         runner: new NodeProcessRunner(),
         logger: new StderrLogger()
     };
-    const server = createMcpServer(createHeadlessToolExecutor(options), { debugTools: true });
+    const server = createMcpServer(
+        createHeadlessToolExecutor(options), { debugTools: true, headless: true });
     await server.connect(new StdioServerTransport());
     return 0;
 }

@@ -33,6 +33,7 @@ export type ToolDelegate = (tool: string, args: Record<string, unknown>) => Prom
 
 export interface McpServerOptions {
     debugTools?: boolean;
+    headless?: boolean;
 }
 
 export function createMcpServer(
@@ -116,7 +117,15 @@ export function createMcpServer(
             description: 'Perform flash memory programming on your MCU',
             inputSchema: {
                 uid: uidSchema,
-                eraseAll: z.boolean().describe('Determine whether to perform a chip erase of the mcu.')
+                eraseAll: z.boolean().describe('Determine whether to perform a chip erase of the mcu.'),
+                ...(options.headless ? {
+                    artifact: z.string().optional().describe(
+                        "Flash artifact override: one or more 'path[,address]' entries separated by ';'."),
+                    verify: z.boolean().optional().describe(
+                        'Verify the programmed image. Omitted uses the flash tool default.'),
+                    dryRun: z.boolean().optional().describe(
+                        'Build the flash command and return it without programming the device.')
+                } : {})
             }
         },
         async (args) => delegateToolCall('eide_flash', args)

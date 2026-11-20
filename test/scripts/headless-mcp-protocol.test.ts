@@ -47,10 +47,8 @@ async function run(): Promise<void> {
     }));
     const resources = NodePath.join(root, 'resources');
     const toolchain = NodePath.join(root, 'toolchain');
-    const schemaDir = NodePath.join(root, 'lang');
     fs.mkdirSync(resources, { recursive: true });
     fs.mkdirSync(toolchain, { recursive: true });
-    fs.mkdirSync(schemaDir, { recursive: true });
 
     const serverPath = NodePath.resolve(__dirname, '../../../src/mcp/headless_main.js');
     const transport = new StdioClientTransport({
@@ -59,8 +57,7 @@ async function run(): Promise<void> {
             serverPath,
             '--project', root,
             '--resources', resources,
-            '--toolchain-path', toolchain,
-            '--schema-dir', schemaDir
+            '--toolchain-path', toolchain
         ],
         cwd: root,
         stderr: 'pipe'
@@ -75,6 +72,11 @@ async function run(): Promise<void> {
             'protocol: debug tools are exposed');
         assert(tools.tools.some((tool: any) => tool.name === 'eide_build'),
             'protocol: build tool is exposed');
+        const flashTool = tools.tools.find((tool: any) => tool.name === 'eide_flash');
+        assert(flashTool.inputSchema.properties.artifact !== undefined
+            && flashTool.inputSchema.properties.verify !== undefined
+            && flashTool.inputSchema.properties.dryRun !== undefined,
+        'protocol: headless flash exposes artifact, verify and dryRun');
 
         let result = await client.callTool({
             name: 'eide_get_targets',

@@ -203,7 +203,6 @@ async function run(): Promise<void> {
         projectPaths: [root],
         resourcesDir: NodePath.join(root, 'resources'),
         toolchainPath: NodePath.join(root, 'toolchain'),
-        schemaDir: NodePath.join(root, 'lang'),
         buildTimeoutMs: 5000,
         flashTimeoutMs: 5000,
         runner: {

@@ -149,7 +149,6 @@ async function run(): Promise<void> {
         projectPaths: [root],
         resourcesDir: resources,
         toolchainPath: toolchain,
-        schemaDir,
         buildTimeoutMs: 10000,
         flashTimeoutMs: 10000,
         runner: new FakeRunner()
@@ -200,7 +199,7 @@ async function run(): Promise<void> {
 
     result = await execute('eide_set_builder_opts', {
         uid: 'project-uid',
-        options: { global: { toolPrefix: 'arm-none-eabi-' } }
+        options: { version: 5, global: { toolPrefix: 'arm-none-eabi-' } }
     });
     assert(result.isError !== true, 'headless: set builder options');
     data = parse(await execute('eide_get_builder_opts', { uid: 'project-uid' }));
