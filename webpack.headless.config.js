@@ -23,9 +23,6 @@ module.exports = {
             vscode$: path.resolve(__dirname, 'src/headless/vscode_api.ts')
         }
     },
-    externals: {
-        x2js: 'commonjs2 x2js'
-    },
     module: {
         rules: [
             {
