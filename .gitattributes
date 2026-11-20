@@ -1,0 +1,13 @@
+* text=auto eol=lf
+
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.vsix binary
+*.7z binary
+*.whl binary
+*.zip binary
+*.exe binary
+*.dll binary

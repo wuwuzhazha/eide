@@ -24,6 +24,8 @@ All notable version changes will be recorded in this file.
 **Docs**:
   - Rewrote the English and Chinese READMEs for EIDE Pro, including install channels, headless CLI/MCP usage, supported toolchains, architecture, verification, and licensing.
   - Documented release automation and the `OPEN_VSX_PAT` secret.
+  - Added contribution, security, pull-request, EditorConfig, and Git attribute files for repository hygiene.
+  - Removed the upstream funding link and stale QnA/email metadata from `package.json`.
 
 ***
 

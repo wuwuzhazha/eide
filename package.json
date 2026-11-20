@@ -3,9 +3,8 @@
     "displayName": "EIDE Pro",
     "publisher": "wuwuzhazha",
     "author": {
-        "name": "cl",
-        "url": "https://github.com/github0null",
-        "email": "github0null@outlook.com"
+        "name": "EIDE Pro contributors",
+        "url": "https://github.com/wuwuzhazha/eide-pro"
     },
     "keywords": [
         "mcu",
@@ -55,7 +54,6 @@
             "description": "We not support virtual workspaces now."
         }
     },
-    "qna": "https://discuss.em-ide.com/t/FAQ",
     "activationEvents": [
         "onStartupFinished"
     ],
@@ -67,8 +65,7 @@
     },
     "readme": "https://github.com/wuwuzhazha/eide-pro#readme",
     "bugs": {
-        "url": "https://github.com/wuwuzhazha/eide-pro/issues",
-        "email": "github0null@outlook.com"
+        "url": "https://github.com/wuwuzhazha/eide-pro/issues"
     },
     "repository": {
         "url": "https://github.com/wuwuzhazha/eide-pro.git",

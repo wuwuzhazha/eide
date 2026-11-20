@@ -212,9 +212,8 @@ npm run webpack:headless  # 构建 dist/eide_cli.js 和 dist/eide_mcp.js
 
 ## 贡献
 
-在 [wuwuzhazha/eide-pro](https://github.com/wuwuzhazha/eide-pro/issues) 提交 issue 和
-pull request。仓库默认分支为 `dev`，pull request 请以该分支为目标。保持每个改动
-聚焦，说明其改变的行为，并附上用于验证的命令和结果。
+分支、测试和 pull request 流程见 [CONTRIBUTING.md](./CONTRIBUTING.md)。安全
+问题请按 [SECURITY.md](./SECURITY.md) 私下报告。
 
 ## 许可证
 
@@ -224,6 +223,8 @@ MIT。详见 [LICENSE](./LICENSE) 和
 
 ## 链接
 
+- [贡献指南](./CONTRIBUTING.md)
+- [安全策略](./SECURITY.md)
 - [更新日志](./CHANGELOG.md)
 - [Headless CLI 与 MCP 指南](./docs/headless.md)
 - [EIDE MCP skill](./docs/skills/README.md)
