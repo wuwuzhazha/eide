@@ -2,167 +2,258 @@
 
 <img src="./res/icon/icon.png" width="96" align="right" alt="EIDE Pro icon">
 
-> Unofficial fork of [github0null/eide](https://github.com/github0null/eide),
-> maintained at [wuwuzhazha/eide-pro](https://github.com/wuwuzhazha/eide-pro). Adds
-> headless CLI/MCP build, flash, and debug with full VS Code build parity.
+EIDE Pro is an embedded MCU development environment for VS Code and for
+headless automation. It manages EIDE projects for ARM Cortex-M, 8051/STM8,
+RISC-V, MIPS, and arbitrary GCC targets; builds them with their native
+toolchains; flashes devices through supported uploaders; and exposes the same
+project and build model through a CLI and MCP server.
 
-[![](https://img.shields.io/badge/repo-wuwuzhazha%2Feide-pro-blue)](https://github.com/wuwuzhazha/eide-pro)
-[![](https://img.shields.io/badge/releases-GitHub-green)](https://github.com/wuwuzhazha/eide-pro/releases)
-[![](https://img.shields.io/badge/Open%20VSX-EIDE%20Pro-blue)](https://open-vsx.org/extension/wuwuzhazha/eide-pro)
+[![Repository](https://img.shields.io/badge/repo-qxzurfru%2Feide-pro-blue)](https://github.com/wuwuzhazha/eide-pro)
+[![Release](https://img.shields.io/github/v/release/wuwuzhazha/eide-pro)](https://github.com/wuwuzhazha/eide-pro/releases)
+[![Open VSX](https://img.shields.io/open-vsx/v/wuwuzhazha/eide-pro)](https://open-vsx.org/extension/wuwuzhazha/eide-pro)
+[![License](https://img.shields.io/github/license/wuwuzhazha/eide-pro)](./LICENSE)
 
-***
+[简体中文](./README_ZH-CN.md)
 
-## Why this fork is not upstreamed
+## Overview
 
-All changes in this fork were produced with AI assistance. Although they are
-covered by the test suite, they touch core project-loading and build paths, and
-submitting them upstream would put a large review and stability burden on the
-upstream maintainers. EIDE Pro is therefore maintained as an independent
-reference implementation and installable extension. Upstream remains
-[github0null/eide](https://github.com/github0null/eide).
+- **Project setup** — create projects from built-in templates, or import
+  Keil 5 (MDK), IAR, and Eclipse projects. Standard Keil chip support packs can
+  be installed for Cortex-M projects.
+- **Build** — build, rebuild, and clean with the AC5, AC6, GCC, LLVM_ARM,
+  IAR_ARM, Keil_C51, SDCC, GNU_SDCC_MCS51, IAR_STM8, COSMIC_STM8, RISCV_GCC,
+  MTI_GCC, and ANY_GCC toolchains.
+- **Flash** — program devices through J-Link, ST-Link, OpenOCD, pyOCD,
+  probe-rs, and custom command uploaders.
+- **Debug integration** — generate Cortex-Debug launch and attach
+  configurations for the supported probes, and provide configurations for the
+  `probe-rs-debug` and `gdbtarget` debug adapters.
+- **Editor tooling** — Cppcheck static analysis, a cpptools IntelliSense
+  provider that does not require `c_cpp_properties.json`, CMSIS Config Wizard,
+  disassembly view, map view, project resource explorer, the MSYS shell on
+  Windows, and a GCC callgraph view.
+- **Automation** — `eide-cli` for build, rebuild, clean, plan, and flash, plus
+  `eide-mcp` for a stdio MCP server. Both use the extension's project loader and
+  builder.
 
-## [中文](./README_ZH-CN.md)
+## Supported projects and toolchains
 
-## Summary 📑
+| Project type | Toolchains |
+| --- | --- |
+| ARM | `AC5`, `AC6`, `GCC`, `LLVM_ARM`, `IAR_ARM` |
+| C51 / STM8 | `Keil_C51`, `SDCC`, `GNU_SDCC_MCS51`, `IAR_STM8`, `COSMIC_STM8` |
+| RISC-V | `RISCV_GCC` |
+| MIPS | `MTI_GCC` |
+| ANY-GCC | `ANY_GCC` |
 
-A mcu development environment for `8051/STM8/Cortex-M/MIPS/RISC-V` on VsCode. 
-
-Provide `8051/STM8/Cortex-M/MIPS/RISC-V` project development, compilation, program flash and other functions.
-
-Supported Platforms: 
-  - **Windows x64 (>= Windows 10)**
-  - **Linux x64**
-  - **macOS**(Only tested in 'macOS 10.15 x64')
-
-![preview](https://docs.em-ide.com/preview.png)
-
-***
+Projects use the EIDE project format (`.eide/eide.yml`). Keil 5, IAR, and
+Eclipse projects can be imported, and standard Keil chip packs are supported for
+Cortex-M projects.
 
 ## Install
 
-From Open VSX:
+### Open VSX
 
 ```bash
 code --install-extension wuwuzhazha.eide-pro
 ```
 
-Or install the latest VSIX from
-[GitHub Releases](https://github.com/wuwuzhazha/eide-pro/releases).
+The extension is published as **EIDE Pro** on
+[Open VSX](https://open-vsx.org/extension/wuwuzhazha/eide-pro). Use this command
+in an editor configured for Open VSX, such as VSCodium or code-server. Stock VS
+Code does not query Open VSX by default; use the VSIX below instead.
 
-***
+### GitHub Releases
 
-## Features 🎉
+Download the latest `eide-pro-<version>.vsix` from
+[GitHub Releases](https://github.com/wuwuzhazha/eide-pro/releases), then install
+it from the command line or with **Extensions: Install from VSIX...** in VS
+Code:
 
-* Support 8051, STM8, Cortex-M, MIPS MTI, RISC-V, GCC projects.
-* Support to import KEIL5/IAR/Eclipse projects, support to import 'IAR-STM8, IAR-ARM, Segger Embedded Studio' project source file resource tree.
-* Support for installing standard KEIL chip support packs (only for Cortex-M projects).
-* Provides many project templates for quick start a project.
-* Build, rebuild, support many toolchains (armcc, gcc-arm-none-eabi, llvm-for-arm, riscv-gcc, xxx-gcc, keil_c51, sdcc ...).
-* Program flash, support: jlink, stlink, openocd, pyocd ...
-* ~~Built-in serial port monitor~~ (recommended to use `Serial Monitor` plug-in).
-* Supports static checking projects by using Cppcheck.
-* Automatically generates default debug configurations for debugger plug-in `cortex-debug, STM8-Debug`.
-* Built-in many utility tools, 'CMSIS Config Wizard UI', 'Disassembly view', 'Program resource view'...
-* Built-in implement `C/C++ IntelliSense Provider` for `ms-vscode.cpptools`, **Not Need to** configurate `c_cpp_properties.json` file.
-* Built-in Msys Unix Shell environment.
-* Built-in Callgraph gui tool for gcc toolchain.
-* Support MCP Tools for VS Code and headless CLI/MCP workflows. See the [EIDE MCP skill](./docs/skills/README.md) for installation and usage.
+```bash
+code --install-extension ./eide-pro-4.0.1.vsix
+```
 
-***
+### Build from source
 
-## Quick Start 🏃‍♀️
+Requirements: Node.js 18, npm, and Git. The `lib/node-utility` submodule is
+required for the build. Its URL in `.gitmodules` uses SSH; rewrite it to HTTPS
+if you do not have GitHub SSH credentials configured.
 
-1. Install any of the above compilers
+```bash
+git clone https://github.com/wuwuzhazha/eide-pro.git
+cd eide-pro
+git -c url."https://github.com/".insteadOf="git@github.com:" submodule update --init --recursive
+npm install
+npm test
+npm run vscode:prepublish
+```
 
-2. Open the **Operations** bar of the extension to set the compiler installation path
+`npm run vscode:prepublish` builds the extension and both headless bundles. To
+package a VSIX with Node.js 18, use the vsce version the project has
+historically used:
 
-3. Click on the `New` or `Import` function in the Operations bar to start your project
+```bash
+npx @vscode/vsce@2.15.0 package
+```
 
-***
+For day-to-day development, `npm run webpack` builds the extension in
+development mode, and `npm run webpack:headless` builds only the CLI and MCP
+bundles.
 
-## Getting Start 📖
+## Quick start
 
-[https://em-ide.com](https://em-ide.com)
+1. Install EIDE Pro.
+2. Install a supported toolchain and set its path in the EIDE Pro
+   **Operations** view.
+3. Create a project from a template, or import an existing Keil, IAR, or
+   Eclipse project.
+4. Build the project, then flash a device or start a debug session from the
+   project view.
 
-***
+## Headless CLI and MCP
 
-## Example
+The headless host loads the same `.eide/eide.yml` project model and generates
+build parameters with the same `CodeBuilder` as the VS Code extension. Headless
+builds therefore honor `.eide/env.ini`, virtual source folders,
+`dependenceList` groups, per-file options, workspace settings, dynamic
+overrides, and xpack-managed toolchains.
 
-- Create A Project By Internal Template
+### CLI
 
-![](https://docs.em-ide.com/img/show/new_prj.gif)
+Build a project after `npm run webpack:headless`, or from a packaged
+extension:
 
-- Build Project
+```bash
+node dist/eide_cli.js build \
+  --project ./firmware \
+  --resources ./res \
+  --toolchain-path ./gcc
+```
 
-![](https://docs.em-ide.com/img/show/build_prj.gif)
+The commands are `build`, `rebuild`, `clean`, `plan`, and `flash`. `plan` and
+`build --dry-run` produce the build plan without compiling; `flash --dry-run`
+prints the flash command without touching hardware. Results are emitted as one
+JSON object on stdout; logs go to stderr. See
+[docs/headless.md](./docs/headless.md) for the full option list, exit codes,
+build result fields, and flash options.
 
-- Flash Project (It failed because there was no connection to the development board, for demonstration purposes only)
+The standalone bundles are `dist/eide_cli.js` and `dist/eide_mcp.js`; their
+package bin names are `eide-cli` and `eide-mcp`.
 
-![](https://docs.em-ide.com/img/show/flash_prj.gif)
+### MCP
 
-- Show Source File Disassembly Code
+```bash
+node dist/eide_mcp.js \
+  --project ./firmware \
+  --resources ./res \
+  --toolchain-path ./gcc
+```
 
-![](https://docs.em-ide.com/img/show/show_disasm.gif)
+The stdio server exposes project build/rebuild, clean, flash,
+target/source/include configuration, stack usage, and callgraph tools. When
+started with `--gdb`, it also exposes GDB-backed tools for connecting, reading
+registers and memory, setting breakpoints, continuing and interrupting
+execution, evaluating expressions, decoding Cortex-M faults, and looking up SVD
+symbols.
 
-- Program Resource View
+VS Code also exposes an HTTP MCP server. Enable it with
+`EIDE.MCP.Server.Enable` and set the port with `EIDE.MCP.Server.Port` (default
+`8940`).
 
-![](https://docs.em-ide.com/img/show/show_prj_res.gif)
+Headless flash supports J-Link, OpenOCD, pyOCD, ST-Link, and probe-rs. STVP,
+stcgal, and custom command uploaders are not supported in headless mode.
 
-***
+For agent installation and setup, see the
+[EIDE MCP skill](./docs/skills/README.md). The skill directory is
+`docs/skills/eide-mcp-tools`.
 
-## ChangeLog 📌
+## Requirements
 
-[ChangeLog](./CHANGELOG.md)
+- **VS Code** — version 1.89 or newer, or a compatible editor that can install
+  from Open VSX or a VSIX file.
+- **Toolchain** — install the compiler, assembler, and linker for your target
+  separately, then configure its path in EIDE Pro. Headless mode accepts
+  `--toolchain-path` or a `--settings` file.
+- **Node.js** — Node.js 18 or newer for the headless CLI, MCP server, and
+  builds from source.
+- **Project** — an EIDE project. Headless mode requires `.eide/eide.yml` with
+  `miscInfo.uid` present.
+- **Platforms** — Windows x64 (Windows 10 or newer), Linux x64, and macOS.
+  Upstream has tested macOS only on 10.15 x64.
 
-***
+## Upstream relationship
 
-## Community 🌈
+EIDE Pro is an unofficial fork of
+[github0null/eide](https://github.com/github0null/eide), maintained at
+[wuwuzhazha/eide-pro](https://github.com/wuwuzhazha/eide-pro). All changes in this
+fork were executed with AI and touch core project-loading and build paths;
+submitting them upstream would impose a disproportionate review and stability
+burden on the upstream maintainers. EIDE Pro is therefore maintained as an
+independent reference implementation and installable extension. Upstream
+remains [github0null/eide](https://github.com/github0null/eide).
 
-- [Github](https://github.com/wuwuzhazha/eide-pro/issues)
+EIDE Pro uses the same `.eide/eide.yml` project model and toolchain definitions
+as upstream, and it has its own extension identity, so it installs separately
+from upstream EIDE.
 
-- [Forum https://discuss.em-ide.com](https://discuss.em-ide.com/)
+## Project structure
 
-***
+| Path | Purpose |
+| --- | --- |
+| `src/extension.ts` | Extension activation, commands, and debug configuration providers |
+| `src/EIDEProject.ts` | `.eide/eide.yml` project model and configuration |
+| `src/CodeBuilder.ts` | Build parameter generation for all toolchains |
+| `src/core/` | Headless build and flash services, project snapshots, problem parsing, and GDB/SVD helpers |
+| `src/cli/` | `eide-cli` entry (`src/cli/eide_cli.ts`), argument parsing, and command dispatch |
+| `src/headless/` | Headless host, settings resolution, and the VS Code API shim |
+| `src/mcp/` | `eide-mcp` entry (`src/mcp/eide_mcp.ts`), stdio server, tools, and GDB integration |
+| `src/html/` | Webview assets, including the callgraph view |
+| `res/` | Templates, toolchain metadata, bundled tools, and icons |
+| `test/` | Test runner and test scripts |
+| `docs/` | Headless CLI/MCP and agent-skill documentation |
+| `lib/node-utility/` | Shared utility submodule |
 
-## How to build ?
+## Testing and verification
 
-You can build this project by your self.
+Run the full suite:
 
-> [!IMPORTANT]  
-> The required version of NodeJS is **18** because of some historical reasons for this extension.
+```bash
+npm test
+```
 
-1. Install `NodeJS 18` (recommanded v18.18.2). You can use `nvm` to manage your NodeJS.
-   Install `vsce` by `npm install -g cheerio@1.0.0-rc.9 @vscode/vsce@2.15.0`
+This compiles `src` and `test`, then runs every script in `test/scripts` through
+`test/run-tests.js`. The suite covers the project model, builders, headless
+build and flash paths, the toolchain matrix, MCP protocol behavior, and GDB/SVD
+parsing.
 
-2. Clone this repo, Open folder by vscode and then run command: 
+Focused commands:
 
-   ```shell
-   npm install
-   ```
+```bash
+npm run compile           # Compile src with tsc
+npm run webpack           # Build the extension in development mode
+npm run webpack:headless  # Build dist/eide_cli.js and dist/eide_mcp.js
+```
 
-3. Press `ctrl+shift+b` to show vscode task
+## Contributing
 
-   - Use `npm: webpack` to build this extension, and then you can press F5 to debug it.
-
-   - Use `build vsix` to build as a vsix package.
-
-
-> [!NOTE]  
-> There may be syntax errors when opening project source code using VSCode, this is because the project uses an older Version of TypeScript, please press `Ctrl+Shift+P` to execute `TypeScript: Select TypeScript Version...` and select version: `v5.8.2`.
-
-## Contribution Guidelines
-
-If you have any good ideas, you can first put forward your suggestions in the issue section. If they are feasible, we will implement them later. If you want to add features by yourself, please also share your ideas at the very beginning (otherwise, we cannot guarantee that your PR will be merged). 
-If you are ready and have completed the debugging and testing, then you can submit a pull request request to the dev branch. Thanks.
+Open issues and pull requests at
+[wuwuzhazha/eide-pro](https://github.com/wuwuzhazha/eide-pro/issues). The repository
+default branch is `dev`; target it for pull requests. Keep each change focused,
+explain the behavior it changes, and include the commands and results used to
+verify it.
 
 ## License
 
-MIT. See [LICENSE](./LICENSE) and [THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md).
+MIT. See [LICENSE](./LICENSE) and
+[THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md). Additional third-party
+license texts are in [licenses](./licenses).
 
-## Sponsor 👍
+## Links
 
-[Sponsor The Author](https://em-ide.com/sponsor)
-
-Thanks:
-
-![Sponsor List](https://em-ide.com/sponsor_list/image.png)
+- [Changelog](./CHANGELOG.md)
+- [Headless CLI and MCP guide](./docs/headless.md)
+- [EIDE MCP skill](./docs/skills/README.md)
+- [GitHub Releases](https://github.com/wuwuzhazha/eide-pro/releases)
+- [Open VSX](https://open-vsx.org/extension/wuwuzhazha/eide-pro)
+- [Upstream EIDE](https://github.com/github0null/eide)

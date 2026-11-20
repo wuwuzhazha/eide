@@ -2,140 +2,231 @@
 
 <img src="./res/icon/icon.png" width="96" align="right" alt="EIDE Pro 图标">
 
-> [github0null/eide](https://github.com/github0null/eide) 的非官方分支，由
-> [wuwuzhazha/eide-pro](https://github.com/wuwuzhazha/eide-pro) 维护。新增与 VS Code
-> 构建行为一致的 Headless CLI/MCP 编译、烧录和调试能力。
+EIDE Pro 是面向 VS Code 和 Headless 自动化的嵌入式 MCU 开发环境。它管理面向
+ARM Cortex-M、8051/STM8、RISC-V、MIPS 以及任意 GCC 目标的 EIDE 工程；使用目标
+平台的原生工具链构建工程；通过受支持的烧录器烧录设备；并通过 CLI 和 MCP 服务器
+对外提供与扩展相同的工程模型和构建模型。
 
-[![](https://img.shields.io/badge/仓库-wuwuzhazha%2Feide-pro-blue)](https://github.com/wuwuzhazha/eide-pro)
-[![](https://img.shields.io/badge/发布-GitHub-green)](https://github.com/wuwuzhazha/eide-pro/releases)
-[![](https://img.shields.io/badge/Open%20VSX-EIDE%20Pro-blue)](https://open-vsx.org/extension/wuwuzhazha/eide-pro)
+[![仓库](https://img.shields.io/badge/repo-qxzurfru%2Feide-pro-blue)](https://github.com/wuwuzhazha/eide-pro)
+[![发布](https://img.shields.io/github/v/release/wuwuzhazha/eide-pro)](https://github.com/wuwuzhazha/eide-pro/releases)
+[![Open VSX](https://img.shields.io/open-vsx/v/wuwuzhazha/eide-pro)](https://open-vsx.org/extension/wuwuzhazha/eide-pro)
+[![许可证](https://img.shields.io/github/license/wuwuzhazha/eide-pro)](./LICENSE)
 
-***
+[English](./README.md)
 
-## 为什么没有向上游提交 PR
+## 概述
 
-本分支的修改全部由 AI 执行。虽然已通过完整测试，但改动涉及工程加载和构建核心链路，直接提交上游会给维护者带来较大的审查和稳定性负担。因此 EIDE Pro 作为独立的参考实现和可安装插件维护，上游仍是
-[github0null/eide](https://github.com/github0null/eide)。
+- **工程创建** — 使用内置模板创建工程，或导入 Keil 5 (MDK)、IAR、Eclipse
+  工程。Cortex-M 工程可安装标准 Keil 芯片支持包。
+- **构建** — 使用 AC5、AC6、GCC、LLVM_ARM、IAR_ARM、Keil_C51、SDCC、
+  GNU_SDCC_MCS51、IAR_STM8、COSMIC_STM8、RISCV_GCC、MTI_GCC 和 ANY_GCC
+  工具链进行编译、重新编译和清理。
+- **烧录** — 通过 J-Link、ST-Link、OpenOCD、pyOCD、probe-rs 和自定义命令
+  烧录器烧录设备。
+- **调试集成** — 为受支持的探针生成 Cortex-Debug launch 和 attach 配置，并
+  为 `probe-rs-debug` 和 `gdbtarget` 调试适配器提供配置。
+- **编辑器工具** — Cppcheck 静态分析、无需 `c_cpp_properties.json` 的
+  cpptools IntelliSense provider、CMSIS Config Wizard、反汇编视图、map 视图、
+  工程资源浏览器、Windows 上的 MSYS shell，以及 GCC 调用图视图。
+- **自动化** — `eide-cli` 提供 build、rebuild、clean、plan 和 flash；
+  `eide-mcp` 提供 stdio MCP 服务器。两者都复用扩展的工程加载器和构建器。
 
-## 简述 📑
+## 支持的工程与工具链
 
-一款适用于 8051/STM8/Cortex-M/MIPS/RISC-V 的单片机开发环境。
+| 工程类型 | 工具链 |
+| --- | --- |
+| ARM | `AC5`、`AC6`、`GCC`、`LLVM_ARM`、`IAR_ARM` |
+| C51 / STM8 | `Keil_C51`、`SDCC`、`GNU_SDCC_MCS51`、`IAR_STM8`、`COSMIC_STM8` |
+| RISC-V | `RISCV_GCC` |
+| MIPS | `MTI_GCC` |
+| ANY-GCC | `ANY_GCC` |
 
-在 vscode 上提供 **8051**, **STM8**, **Cortex-M**, **MIPS MTI**, **RISC-V** ... 项目的 开发, 编译, 烧录 等功能。
-
-支持的平台: 
-  - **Windows x64 (>= Windows 10)**
-  - **Linux x64**
-  - **macOS**（仅在 'macOS 10.15 x64' 中测试过）
-
-![preview](https://docs.em-ide.com/preview.png)
-
-***
+工程使用 EIDE 工程格式（`.eide/eide.yml`）。可导入 Keil 5、IAR、Eclipse
+工程，Cortex-M 工程支持标准 Keil 芯片包。
 
 ## 安装
 
-从 Open VSX 安装：
+### Open VSX
 
 ```bash
 code --install-extension wuwuzhazha.eide-pro
 ```
 
-或从 [GitHub Releases](https://github.com/wuwuzhazha/eide-pro/releases) 下载最新 VSIX。
+扩展以 **EIDE Pro** 名称发布在
+[Open VSX](https://open-vsx.org/extension/wuwuzhazha/eide-pro)。请在配置了
+Open VSX 的编辑器（例如 VSCodium 或 code-server）中执行该命令。标准 VS Code
+默认不查询 Open VSX；请改用下方的 VSIX。
 
-***
+### GitHub Releases
 
-## 功能特性 🎉
+从 [GitHub Releases](https://github.com/wuwuzhazha/eide-pro/releases) 下载最新的
+`eide-pro-<version>.vsix`，然后通过命令行或在 VS Code 中执行
+**Extensions: Install from VSIX...** 安装：
 
-* 支持开发 8051，STM8，Cortex-M，MIPS MTI, RISC-V, GCC 项目。
-* 支持导入 KEIL5/IAR/Eclipse 项目，支持导入 `IAR-STM8, IAR-ARM, Segger Embedded Studio` 项目源文件资源树。
-* 支持安装标准的 KEIL 芯片支持包 (仅用于 Cortex-M 项目)。
-* 提供丰富的项目模板方便快速开始项目。
-* 一键编译，支持多种主流的编译工具 (armcc, gcc-arm-none-eabi, llvm-for-arm, riscv-gcc, xxx-gcc, keil_c51, sdcc ...)。
-* 一键烧录到芯片，支持多种主流的烧录器 (jlink, stlink, openocd, pyocd ...)。
-* ~~内置的串口监视器，一键打开串口~~（建议使用 `Serial Monitor` 插件）。
-* 支持使用 Cppcheck 对项目进行静态检查。
-* 自动生成默认调试配置，为调试器插件 Cortex-debug / STM8-debug 生成默认配置。
-* 内置多种实用工具，`CMSIS Config Wizard UI`, `反汇编查看`，`程序资源视图` ...
-* 内置 C/C++ 插件的 `C/C++ IntelliSense Provider`，**无需配置** `c_cpp_properties.json` 即可获得源码跳转，补全提示功能。
-* 内置 Msys Unix Shell 环境，方便执行 shell 命令或脚本
-* 内置 Callgraph 调用图可视化工具（仅限gcc编译器）
-* 支持 VS Code MCP 与 Headless CLI/MCP 工作流，安装与使用详见 [EIDE MCP skill](./docs/skills/README.md)。
+```bash
+code --install-extension ./eide-pro-4.0.1.vsix
+```
 
-***
+### 从源码构建
 
-## 快速开始 🏃‍♀️
+环境要求：Node.js 18、npm 和 Git。构建需要 `lib/node-utility` 子模块。该子模块
+在 `.gitmodules` 中的 URL 使用 SSH；如果没有配置 GitHub SSH 凭据，请改写为
+HTTPS。
 
-1. 安装上述的任意一款编译器
+```bash
+git clone https://github.com/wuwuzhazha/eide-pro.git
+cd eide-pro
+git -c url."https://github.com/".insteadOf="git@github.com:" submodule update --init --recursive
+npm install
+npm test
+npm run vscode:prepublish
+```
 
-2. 打开扩展的 Operations 栏，设置编译器的安装路径
+`npm run vscode:prepublish` 会构建扩展和两个 Headless bundle。使用 Node.js 18
+打包 VSIX 时，请使用该项目一直沿用的 vsce 版本：
 
-3. 点击 Operations 栏的 `新建` 或 `导入` 功能，开始你的项目
+```bash
+npx @vscode/vsce@2.15.0 package
+```
 
-***
+日常开发中，`npm run webpack` 以开发模式构建扩展，`npm run webpack:headless`
+只构建 CLI 与 MCP bundle。
 
-## 入门 📖
+## 快速开始
 
-[https://em-ide.com](https://em-ide.com)
+1. 安装 EIDE Pro。
+2. 安装受支持的工具链，并在 EIDE Pro 的 **Operations** 视图中设置其路径。
+3. 从模板创建工程，或导入已有的 Keil、IAR 或 Eclipse 工程。
+4. 构建工程，然后在工程视图中烧录设备或启动调试会话。
 
-***
+## Headless CLI 与 MCP
 
-## 更新日志 📌
+Headless 宿主加载相同的 `.eide/eide.yml` 工程模型，并使用与 VS Code 扩展相同的
+`CodeBuilder` 生成构建参数。因此，Headless 构建遵循 `.eide/env.ini`、虚拟源码
+目录、`dependenceList` 分组、单文件选项、工作区设置、动态 overrides 以及由
+xpack 管理的工具链。
 
-[ChangeLog](./CHANGELOG.md)
+### CLI
 
-***
+执行 `npm run webpack:headless` 后，或从已打包的扩展中运行：
 
-## 遇到了问题 ? 😥
+```bash
+node dist/eide_cli.js build \
+  --project ./firmware \
+  --resources ./res \
+  --toolchain-path ./gcc
+```
 
-反馈途径: 
+命令包括 `build`、`rebuild`、`clean`、`plan` 和 `flash`。`plan` 与
+`build --dry-run` 只生成构建计划而不执行编译；`flash --dry-run` 只打印烧录命令
+而不访问硬件。结果以一个 JSON 对象输出到 stdout；日志输出到 stderr。完整选项、
+退出码、构建结果字段和烧录选项见 [docs/headless.md](./docs/headless.md)。
 
-- [Github Issue](https://github.com/wuwuzhazha/eide-pro/issues)
+独立 bundle 为 `dist/eide_cli.js` 和 `dist/eide_mcp.js`；对应的 package bin
+名称为 `eide-cli` 和 `eide-mcp`。
 
-- [论坛: https://discuss.em-ide.com](https://discuss.em-ide.com/)
+### MCP
 
-***
+```bash
+node dist/eide_mcp.js \
+  --project ./firmware \
+  --resources ./res \
+  --toolchain-path ./gcc
+```
 
-## 如何构建 ?
+stdio 服务器提供工程 build/rebuild、clean、flash、目标/源码/头文件路径配置、
+栈使用量和调用图工具。使用 `--gdb` 启动时，还会提供基于 GDB 的工具，用于连接、
+读取寄存器和内存、设置断点、继续和中断执行、求值表达式、解码 Cortex-M fault，
+以及查找 SVD 符号。
 
-你可以自行构建该扩展
+VS Code 还提供 HTTP MCP 服务器。通过 `EIDE.MCP.Server.Enable` 启用，并通过
+`EIDE.MCP.Server.Port` 设置端口（默认 `8940`）。
 
-> [!IMPORTANT]  
-> 由于这个扩展有一些历史原因，因此要求的 node 版本是 18。
+Headless 烧录支持 J-Link、OpenOCD、pyOCD、ST-Link 和 probe-rs。Headless 模式
+不支持 STVP、stcgal 和自定义命令烧录器。
 
-1. 安装 `NodeJS 18`（建议版本：v18.18.2）；推荐使用 nvm 工具管理 NodeJS 版本
-   安装 `vsce`; 执行：`npm install -g cheerio@1.0.0-rc.9 @vscode/vsce@2.15.0`
+Agent 安装与配置见 [EIDE MCP skill](./docs/skills/README.md)。skill 目录为
+`docs/skills/eide-mcp-tools`。
 
-2. 克隆该仓库，用 VSCode 打开该项目，并执行如下命令
+## 环境要求
 
-   ```shell
-   npm install
-   ```
+- **VS Code** — 1.89 或更新版本，或兼容的、可从 Open VSX 或 VSIX 文件安装扩展的
+  编辑器。
+- **工具链** — 单独安装目标平台所需的编译器、汇编器和链接器，然后在 EIDE Pro 中
+  配置其路径。Headless 模式接受 `--toolchain-path` 或 `--settings` 文件。
+- **Node.js** — Headless CLI、MCP 服务器以及从源码构建需要 Node.js 18 或更新
+  版本。
+- **工程** — 一个 EIDE 工程。Headless 模式要求 `.eide/eide.yml` 中存在
+  `miscInfo.uid`。
+- **平台** — Windows x64（Windows 10 或更新版本）、Linux x64 和 macOS。上游仅在
+  10.15 x64 上测试过 macOS。
 
-3. 按下快捷键 `ctrl+shift+b` 打开构建命令
+## 与上游的关系
 
-   - 使用 `npm: webpack` 可构建带有调试信息的扩展，稍后你可以按 F5 进行调试
+EIDE Pro 是 [github0null/eide](https://github.com/github0null/eide) 的非官方分支，
+由 [wuwuzhazha/eide-pro](https://github.com/wuwuzhazha/eide-pro) 维护。本分支的所有
+改动均由 AI 执行，并且涉及工程加载和构建核心链路；将这些改动提交上游会给上游
+维护者带来不成比例的审查和稳定性负担。因此，EIDE Pro 作为独立的参考实现和可安装
+扩展维护。上游仍然是
+[github0null/eide](https://github.com/github0null/eide)。
 
-   - 使用 `build vsix` 构建并打包成 VSIX
+EIDE Pro 使用与上游相同的 `.eide/eide.yml` 工程模型和工具链定义，并拥有独立的
+扩展标识，因此与上游 EIDE 分开安装。
 
-> [!NOTE]  
-> 注意：VSCode 打开工程源码可能会语法报错，这是由于这个项目使用了较老版本的 TypeScript，请按下 `Ctrl+Shift+P` 执行 `TypeScript: Select TypeScript Version...` 选择工作区中的版本 `v5.8.2`.
+## 项目结构
 
-## 贡献指南
+| 路径 | 用途 |
+| --- | --- |
+| `src/extension.ts` | 扩展激活、命令和调试配置 provider |
+| `src/EIDEProject.ts` | `.eide/eide.yml` 工程模型与配置 |
+| `src/CodeBuilder.ts` | 所有工具链的构建参数生成 |
+| `src/core/` | Headless 构建与烧录服务、工程快照、问题解析、GDB/SVD 辅助代码 |
+| `src/cli/` | `eide-cli` 入口（`src/cli/eide_cli.ts`）、参数解析与命令分发 |
+| `src/headless/` | Headless 宿主、设置解析和 VS Code API shim |
+| `src/mcp/` | `eide-mcp` 入口（`src/mcp/eide_mcp.ts`）、stdio 服务器、工具与 GDB 集成 |
+| `src/html/` | Webview 资源，包括调用图视图 |
+| `res/` | 模板、工具链元数据、内置工具和图标 |
+| `test/` | 测试运行器和测试脚本 |
+| `docs/` | Headless CLI/MCP 与 agent skill 文档 |
+| `lib/node-utility/` | 共享工具子模块 |
 
-如果您有什么好的想法，可以先在issue中提出意见，如果可行稍后我们会进行实现。
+## 测试与验证
 
-如果您现在就想自己动手添加功能，那么也请在一开始先提出您的想法（否则我们不能保证您的PR被合并），避免浪费您的时间。
+运行完整测试套件：
 
-在完成了更改后，如果您确保没有其他问题，那么您可以向 dev 分支提出 pull request 请求，稍后我们会进行审核。
+```bash
+npm test
+```
+
+该命令编译 `src` 和 `test`，然后通过 `test/run-tests.js` 运行 `test/scripts`
+中的每个脚本。测试覆盖工程模型、构建器、Headless 构建与烧录路径、工具链矩阵、
+MCP 协议行为以及 GDB/SVD 解析。
+
+常用命令：
+
+```bash
+npm run compile           # 使用 tsc 编译 src
+npm run webpack           # 以开发模式构建扩展
+npm run webpack:headless  # 构建 dist/eide_cli.js 和 dist/eide_mcp.js
+```
+
+## 贡献
+
+在 [wuwuzhazha/eide-pro](https://github.com/wuwuzhazha/eide-pro/issues) 提交 issue 和
+pull request。仓库默认分支为 `dev`，pull request 请以该分支为目标。保持每个改动
+聚焦，说明其改变的行为，并附上用于验证的命令和结果。
 
 ## 许可证
 
-MIT。详见 [LICENSE](./LICENSE) 与 [THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md)。
+MIT。详见 [LICENSE](./LICENSE) 和
+[THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md)。其他第三方许可证文本位于
+[licenses](./licenses)。
 
-## 赞助 👍
+## 链接
 
-[请作者喝咖啡](https://em-ide.com/sponsor)
-
-感谢:
-
-![Sponsor List](https://em-ide.com/sponsor_list/image.png)
+- [更新日志](./CHANGELOG.md)
+- [Headless CLI 与 MCP 指南](./docs/headless.md)
+- [EIDE MCP skill](./docs/skills/README.md)
+- [GitHub Releases](https://github.com/wuwuzhazha/eide-pro/releases)
+- [Open VSX](https://open-vsx.org/extension/wuwuzhazha/eide-pro)
+- [上游 EIDE](https://github.com/github0null/eide)
