@@ -117,16 +117,16 @@ async function main() {
             'installed eide-cli create returns project metadata');
         const createdConfig = path.join(created.projectPath, '.eide', 'eide.yml');
         assert(fs.existsSync(createdConfig), 'installed eide-cli create writes eide.yml');
-        const createBuild = runNode([
-            cli, 'build', '--project', created.projectPath, '--toolchain-path', toolchainRoot,
-            '--timeout', '120000'
+        const createPlan = runNode([
+            cli, 'plan', '--project', created.projectPath, '--toolchain-path', toolchainRoot
         ], workspace);
-        assert(createBuild.status === 0,
-            `installed eide-cli builds a created project\n${createBuild.stderr}`);
-        const createResult = JSON.parse(createBuild.stdout);
-        assert(createResult.success === true, 'created project builds successfully');
-        assert((createResult.artifacts || []).some(file => file.endsWith('.elf')),
-            'created project produces an ELF');
+        assert(createPlan.status === 0,
+            `installed eide-cli plans a created project\n${createPlan.stderr}`);
+        const createResult = JSON.parse(createPlan.stdout);
+        assert(createResult.success === true && createResult.command === 'plan',
+            'created project generates a build plan');
+        assert(fs.existsSync(createResult.paramsFile), 'created project writes builder params');
+        assert(createResult.params.toolchain === 'GCC', 'created project selects the template toolchain');
 
         await verifyMcp(mcp, project, workspace);
     } finally {
