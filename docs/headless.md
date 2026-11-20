@@ -186,6 +186,7 @@ It additionally exposes debug tools, backed by GDB/MI:
 - `eide_debug_connect`, `eide_debug_disconnect`
 - `eide_debug_read_register`, `eide_debug_read_memory`, `eide_debug_write_memory`
 - `eide_debug_set_breakpoint`, `eide_debug_remove_breakpoint`
+- `eide_debug_backtrace`, `eide_debug_list_breakpoints`
 - `eide_debug_continue`, `eide_debug_interrupt`, `eide_debug_evaluate`
 - `eide_debug_fault` (Cortex-M fault register decoding)
 - `eide_debug_svd_lookup` (peripheral/register lookup by address or name)
@@ -198,5 +199,4 @@ Tool calls are serialized. A debug session stays active until
 - Flash support covers JLink, OpenOCD, pyOCD, STLink, and probe-rs.
   STVP, stcgal, and custom command uploaders fail explicitly.
 - `eide_debug_svd_lookup` supports the SVD subset implemented in
-  `src/core/debug/svd.ts` (no `derivedFrom`, enumerated values, or inherited
-  access).
+  `src/core/debug/svd.ts` (no enumerated values or inherited access).

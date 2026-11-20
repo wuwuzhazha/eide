@@ -1,11 +1,12 @@
 import * as fs from 'fs';
 import * as NodePath from 'path';
 import { decodeCortexFault } from '../core/debug/fault';
-import { MiSession, MiSpawn, MiStopEvent } from '../core/debug/mi';
+import { MiBreakpointRecord, MiFrame, MiSession, MiSpawn, MiStopEvent } from '../core/debug/mi';
 import { SvdModel } from '../core/debug/svd';
 import { HeadlessProject } from './headless_project';
 
 const MAX_DEBUG_MEMORY_BYTES = 1024 * 1024;
+const MAX_BACKTRACE_DEPTH = 200;
 
 export interface DebugSessionOptions {
     gdbPath?: string;
@@ -141,6 +142,20 @@ export class HeadlessDebugSession {
         }
         await this.requireSession().removeBreakpoint(id);
         return { success: true, id };
+    }
+
+    async backtrace(maxDepth: unknown): Promise<MiFrame[]> {
+        if (maxDepth !== undefined
+            && (typeof maxDepth !== 'number' || !Number.isInteger(maxDepth)
+                || maxDepth < 1 || maxDepth > MAX_BACKTRACE_DEPTH)) {
+            throw new Error(`'maxDepth' must be an integer between 1 and ${MAX_BACKTRACE_DEPTH}.`);
+        }
+        const frames = await this.requireSession().backtrace();
+        return maxDepth === undefined ? frames : frames.slice(0, maxDepth);
+    }
+
+    async listBreakpoints(): Promise<MiBreakpointRecord[]> {
+        return this.requireSession().listBreakpoints();
     }
 
     async continue(stopTimeoutMs: unknown): Promise<MiStopEvent> {

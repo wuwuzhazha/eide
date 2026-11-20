@@ -67,9 +67,13 @@ async function run(): Promise<void> {
         await client.connect(transport);
 
         const tools = await client.listTools();
-        assert(tools.tools.length === 33, 'protocol: exposes 33 tools');
+        assert(tools.tools.length === 35, 'protocol: exposes 35 tools');
         assert(tools.tools.some((tool: any) => tool.name === 'eide_debug_connect'),
             'protocol: debug tools are exposed');
+        assert(tools.tools.some((tool: any) => tool.name === 'eide_debug_backtrace'),
+            'protocol: debug backtrace tool is exposed');
+        assert(tools.tools.some((tool: any) => tool.name === 'eide_debug_list_breakpoints'),
+            'protocol: debug breakpoint list tool is exposed');
         assert(tools.tools.some((tool: any) => tool.name === 'eide_build'),
             'protocol: build tool is exposed');
         const flashTool = tools.tools.find((tool: any) => tool.name === 'eide_flash');

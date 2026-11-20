@@ -414,6 +414,37 @@ export interface MiBreakpoint {
     line?: number;
 }
 
+export interface MiFrame {
+    level: number;
+    address: number;
+    functionName?: string;
+    file?: string;
+    line?: number;
+    fullName?: string;
+}
+
+export interface MiBreakpointLocation {
+    number: string;
+    enabled: boolean;
+    address?: number;
+    functionName?: string;
+    file?: string;
+    line?: number;
+}
+
+export interface MiBreakpointRecord {
+    id: number;
+    type: string;
+    enabled: boolean;
+    address?: number;
+    functionName?: string;
+    file?: string;
+    line?: number;
+    condition?: string;
+    hitCount?: number;
+    locations?: MiBreakpointLocation[];
+}
+
 export interface MiSessionOptions {
     gdbPath?: string;
     gdbArgs?: string[];
@@ -670,6 +701,59 @@ export class MiSession {
             throw new MiError('state', 'breakpoint id must be a positive integer');
         }
         await this.runCommand(`-break-delete ${id}`, ['done']);
+    }
+
+    async backtrace(): Promise<MiFrame[]> {
+        const record = await this.runCommand('-stack-list-frames', ['done']);
+        const stack = record.results.stack;
+        if (!Array.isArray(stack)) {
+            throw new MiError('protocol', 'backtrace response has no stack list');
+        }
+        return stack.map((value, index) => {
+            const entry = requireMiTupleValue(value, `stack[${index}] is not a frame entry`);
+            const frame = entry.frame;
+            if (frame === undefined) {
+                throw new MiError('protocol', `stack[${index}] has no frame`);
+            }
+            return parseMiFrame(frame, `stack[${index}].frame`);
+        });
+    }
+
+    async listBreakpoints(): Promise<MiBreakpointRecord[]> {
+        const record = await this.runCommand('-break-list', ['done']);
+        const tableRaw = record.results.BreakpointTable;
+        if (tableRaw === null || typeof tableRaw !== 'object' || Array.isArray(tableRaw)) {
+            throw new MiError('protocol', 'breakpoint list response has no BreakpointTable tuple');
+        }
+        const body = (tableRaw as MiTuple).body;
+        if (!Array.isArray(body)) {
+            throw new MiError('protocol', 'breakpoint table has no body list');
+        }
+        const breakpoints: MiBreakpointRecord[] = [];
+        let current: MiBreakpointRecord | undefined;
+        for (let index = 0; index < body.length; index++) {
+            const entry = body[index];
+            if (entry === null || typeof entry !== 'object' || Array.isArray(entry)) {
+                throw new MiError('protocol', `breakpoint table body[${index}] is not a tuple`);
+            }
+            const tuple = entry as MiTuple;
+            if (tuple.bkpt !== undefined) {
+                current = parseMiBreakpointRecord(tuple.bkpt, `BreakpointTable.body[${index}].bkpt`);
+                breakpoints.push(current);
+                continue;
+            }
+            if (current === undefined) {
+                throw new MiError(
+                    'protocol',
+                    `breakpoint table body[${index}] is a location without a preceding breakpoint`,
+                );
+            }
+            appendBreakpointLocation(
+                current,
+                parseMiBreakpointLocation(tuple, `BreakpointTable.body[${index}]`),
+            );
+        }
+        return breakpoints;
     }
 
     async continue(): Promise<void> {
@@ -1056,6 +1140,187 @@ function formatMiAddress(address: MiAddress): string {
         throw new MiError('state', `invalid address: ${String(address)}`);
     }
     return `0x${address.toString(16)}`;
+}
+
+function requireMiTupleValue(value: MiValue, context: string): MiTuple {
+    if (value === null || typeof value !== 'object' || Array.isArray(value)) {
+        throw new MiError('protocol', `${context} is not a tuple`);
+    }
+    return value as MiTuple;
+}
+
+function optionalMiString(tuple: MiTuple, key: string, context: string): string | undefined {
+    const value = tuple[key];
+    if (value === undefined) {
+        return undefined;
+    }
+    if (typeof value !== 'string') {
+        throw new MiError('protocol', `${context}.${key} is not a string`);
+    }
+    return value;
+}
+
+function optionalMiInteger(tuple: MiTuple, key: string, context: string): number | undefined {
+    const value = tuple[key];
+    if (value === undefined) {
+        return undefined;
+    }
+    if (typeof value !== 'string') {
+        throw new MiError('protocol', `${context}.${key} is not a decimal integer`);
+    }
+    return parseDecimalInteger(value, `${context}.${key}`);
+}
+
+function optionalMiAddress(tuple: MiTuple, context: string): number | undefined {
+    const value = tuple.addr;
+    if (value === undefined || value === '<PENDING>' || value === '<MULTIPLE>') {
+        return undefined;
+    }
+    if (typeof value !== 'string') {
+        throw new MiError('protocol', `${context}.addr is not a string`);
+    }
+    const address = parseTargetValue(value);
+    if (address === undefined) {
+        throw new MiError('protocol', `${context}.addr is not an address: ${value}`);
+    }
+    return address;
+}
+
+function parseBreakpointEnabled(value: MiValue | undefined, context: string, allowInvalidCondition: boolean): boolean {
+    if (typeof value !== 'string') {
+        throw new MiError('protocol', `${context} has no enabled flag`);
+    }
+    if (value === 'y') {
+        return true;
+    }
+    if (value === 'n' || (allowInvalidCondition && value === 'N')) {
+        return false;
+    }
+    throw new MiError('protocol', `${context} has an invalid enabled flag: ${value}`);
+}
+
+function parseMiFrame(value: MiValue, context: string): MiFrame {
+    const tuple = requireMiTupleValue(value, `${context} frame is not a tuple`);
+    const levelRaw = tuple.level;
+    if (typeof levelRaw !== 'string') {
+        throw new MiError('protocol', `${context} has no frame level`);
+    }
+    const addressRaw = tuple.addr;
+    if (typeof addressRaw !== 'string') {
+        throw new MiError('protocol', `${context} has no frame address`);
+    }
+    const address = parseTargetValue(addressRaw);
+    if (address === undefined) {
+        throw new MiError('protocol', `${context} has an invalid frame address: ${addressRaw}`);
+    }
+    const frame: MiFrame = {
+        level: parseDecimalInteger(levelRaw, `${context} level`),
+        address,
+    };
+    const functionName = optionalMiString(tuple, 'func', context);
+    if (functionName !== undefined) {
+        frame.functionName = functionName;
+    }
+    const file = optionalMiString(tuple, 'file', context);
+    if (file !== undefined) {
+        frame.file = file;
+    }
+    const line = optionalMiInteger(tuple, 'line', context);
+    if (line !== undefined) {
+        frame.line = line;
+    }
+    const fullName = optionalMiString(tuple, 'fullname', context);
+    if (fullName !== undefined) {
+        frame.fullName = fullName;
+    }
+    return frame;
+}
+
+function parseMiBreakpointLocation(value: MiValue, context: string): MiBreakpointLocation {
+    const tuple = requireMiTupleValue(value, `${context} is not a breakpoint location tuple`);
+    const number = tuple.number;
+    if (typeof number !== 'string' || !/^\d+(\.\d+)?$/.test(number)) {
+        throw new MiError('protocol', `${context} has no breakpoint location number`);
+    }
+    const location: MiBreakpointLocation = {
+        number,
+        enabled: parseBreakpointEnabled(tuple.enabled, context, true),
+    };
+    const address = optionalMiAddress(tuple, context);
+    if (address !== undefined) {
+        location.address = address;
+    }
+    const functionName = optionalMiString(tuple, 'func', context);
+    if (functionName !== undefined) {
+        location.functionName = functionName;
+    }
+    const file = optionalMiString(tuple, 'file', context);
+    if (file !== undefined) {
+        location.file = file;
+    }
+    const line = optionalMiInteger(tuple, 'line', context);
+    if (line !== undefined) {
+        location.line = line;
+    }
+    return location;
+}
+
+function parseMiBreakpointRecord(value: MiValue, context: string): MiBreakpointRecord {
+    const tuple = requireMiTupleValue(value, `${context} is not a breakpoint tuple`);
+    const numberRaw = tuple.number;
+    if (typeof numberRaw !== 'string') {
+        throw new MiError('protocol', `${context} has no breakpoint number`);
+    }
+    const type = tuple.type;
+    if (typeof type !== 'string' || type === '') {
+        throw new MiError('protocol', `${context} has no breakpoint type`);
+    }
+    const breakpoint: MiBreakpointRecord = {
+        id: parseDecimalInteger(numberRaw, `${context} number`),
+        type,
+        enabled: parseBreakpointEnabled(tuple.enabled, context, false),
+    };
+    const address = optionalMiAddress(tuple, context);
+    if (address !== undefined) {
+        breakpoint.address = address;
+    }
+    const functionName = optionalMiString(tuple, 'func', context);
+    if (functionName !== undefined) {
+        breakpoint.functionName = functionName;
+    }
+    const file = optionalMiString(tuple, 'file', context);
+    if (file !== undefined) {
+        breakpoint.file = file;
+    }
+    const line = optionalMiInteger(tuple, 'line', context);
+    if (line !== undefined) {
+        breakpoint.line = line;
+    }
+    const condition = optionalMiString(tuple, 'cond', context);
+    if (condition !== undefined) {
+        breakpoint.condition = condition;
+    }
+    const hitCount = optionalMiInteger(tuple, 'times', context);
+    if (hitCount !== undefined) {
+        breakpoint.hitCount = hitCount;
+    }
+    const locationsRaw = tuple.locations;
+    if (locationsRaw !== undefined) {
+        if (!Array.isArray(locationsRaw)) {
+            throw new MiError('protocol', `${context}.locations is not a list`);
+        }
+        breakpoint.locations = locationsRaw.map((location, index) =>
+            parseMiBreakpointLocation(location, `${context}.locations[${index}]`));
+    }
+    return breakpoint;
+}
+
+function appendBreakpointLocation(breakpoint: MiBreakpointRecord, location: MiBreakpointLocation): void {
+    if (breakpoint.locations === undefined) {
+        breakpoint.locations = [location];
+    } else {
+        breakpoint.locations.push(location);
+    }
 }
 
 function parseTargetValue(text: string): number | undefined {

@@ -456,11 +456,158 @@ async function testCommandFailureModes(): Promise<void> {
     assert(stderrFailure.message.includes('target not responding'), 'command timeout includes stderr');
 }
 
+async function testBacktraceAndBreakpointList(): Promise<void> {
+    const harness = createHarness((command, token) => {
+        if (command === '-stack-list-frames') {
+            return `${token}^done,stack=[frame={level="0",addr="0x08000100",func="main",file="main.c",fullname="C:\\\\fw\\\\main.c",line="10"},frame={level="1",addr="0x08000200"}]\n`;
+        }
+        if (command === '-break-list') {
+            return `${token}^done,BreakpointTable={nr_rows="2",nr_cols="6",hdr=[],body=[bkpt={number="1",type="breakpoint",disp="keep",enabled="y",addr="0x08000100",func="main",file="main.c",fullname="C:\\\\fw\\\\main.c",line="10",cond="x > 0",times="3",original-location="main"},bkpt={number="2",type="breakpoint",disp="keep",enabled="n",addr="<PENDING>",pending="later",times="0",original-location="later"}]}\n`;
+        }
+        return standardResponse(command, token);
+    });
+    await harness.session.connect('localhost:3333');
+    const frames = await harness.session.backtrace();
+    assertEqual(harness.fake.written[3], '4-stack-list-frames\n', 'backtrace command');
+    assertEqual(frames.length, 2, 'backtrace frame count');
+    assertEqual(frames[0].level, 0, 'backtrace first level');
+    assertEqual(frames[0].address, 0x08000100, 'backtrace first address');
+    assertEqual(frames[0].functionName, 'main', 'backtrace first function');
+    assertEqual(frames[0].file, 'main.c', 'backtrace first file');
+    assertEqual(frames[0].line, 10, 'backtrace first line');
+    assertEqual(frames[0].fullName, 'C:\\fw\\main.c', 'backtrace first full name');
+    assertEqual(frames[1].level, 1, 'backtrace second level');
+    assert(frames[1].functionName === undefined, 'backtrace absent function stays undefined');
+
+    const breakpoints = await harness.session.listBreakpoints();
+    assertEqual(harness.fake.written[4], '5-break-list\n', 'breakpoint list command');
+    assertEqual(breakpoints.length, 2, 'breakpoint list count');
+    assertEqual(breakpoints[0].id, 1, 'breakpoint list id');
+    assertEqual(breakpoints[0].type, 'breakpoint', 'breakpoint list type');
+    assertEqual(breakpoints[0].enabled, true, 'breakpoint list enabled');
+    assertEqual(breakpoints[0].address, 0x08000100, 'breakpoint list address');
+    assertEqual(breakpoints[0].functionName, 'main', 'breakpoint list function');
+    assertEqual(breakpoints[0].file, 'main.c', 'breakpoint list file');
+    assertEqual(breakpoints[0].line, 10, 'breakpoint list line');
+    assertEqual(breakpoints[0].condition, 'x > 0', 'breakpoint list condition');
+    assertEqual(breakpoints[0].hitCount, 3, 'breakpoint list hit count');
+    assertEqual(breakpoints[1].enabled, false, 'disabled breakpoint list flag');
+    assert(breakpoints[1].address === undefined, 'pending breakpoint has no address');
+    await harness.session.disconnect();
+
+    const legacyMultiple = createHarness((command, token) => {
+        if (command === '-break-list') {
+            return `${token}^done,BreakpointTable={nr_rows="1",nr_cols="6",hdr=[],body=[bkpt={number="1",type="breakpoint",disp="keep",enabled="y",addr="<MULTIPLE>",times="0"},{number="1.1",enabled="y",addr="0x08000100",func="foo",file="a.c",line="1"},{number="1.2",enabled="N",addr="0x08000200"}]}\n`;
+        }
+        return standardResponse(command, token);
+    });
+    await legacyMultiple.session.connect('localhost:3333');
+    const multiple = await legacyMultiple.session.listBreakpoints();
+    assertEqual(multiple.length, 1, 'legacy multiple location breakpoint count');
+    assert(multiple[0].address === undefined, 'multiple location breakpoint has no single address');
+    assertEqual(multiple[0].locations?.length, 2, 'legacy location count');
+    assertEqual(multiple[0].locations?.[0].number, '1.1', 'legacy location number');
+    assertEqual(multiple[0].locations?.[0].enabled, true, 'legacy location enabled');
+    assertEqual(multiple[0].locations?.[0].address, 0x08000100, 'legacy location address');
+    assertEqual(multiple[0].locations?.[1].enabled, false, 'invalid condition location disabled');
+    await legacyMultiple.session.disconnect();
+
+    const modernMultiple = createHarness((command, token) => {
+        if (command === '-break-list') {
+            return `${token}^done,BreakpointTable={nr_rows="1",nr_cols="6",hdr=[],body=[bkpt={number="1",type="breakpoint",enabled="y",addr="0x08000100",times="0",locations=[{number="1.1",enabled="y",addr="0x08000100",func="foo",file="a.c",line="1"}]}]}\n`;
+        }
+        return standardResponse(command, token);
+    });
+    await modernMultiple.session.connect('localhost:3333');
+    const nested = await modernMultiple.session.listBreakpoints();
+    assertEqual(nested[0].locations?.length, 1, 'nested location count');
+    assertEqual(nested[0].locations?.[0].functionName, 'foo', 'nested location function');
+    await modernMultiple.session.disconnect();
+
+    const empty = createHarness((command, token) => {
+        if (command === '-break-list') {
+            return `${token}^done,BreakpointTable={nr_rows="0",nr_cols="6",hdr=[],body=[]}\n`;
+        }
+        return standardResponse(command, token);
+    });
+    await empty.session.connect('localhost:3333');
+    assertEqual((await empty.session.listBreakpoints()).length, 0, 'empty breakpoint list');
+    await empty.session.disconnect();
+}
+
+async function testBacktraceAndBreakpointErrors(): Promise<void> {
+    let stackResponse: ((token: number) => string) | undefined;
+    let breakpointResponse: ((token: number) => string) | undefined;
+    const harness = createHarness((command, token) => {
+        if (command === '-stack-list-frames' && stackResponse !== undefined) {
+            return stackResponse(token);
+        }
+        if (command === '-break-list' && breakpointResponse !== undefined) {
+            return breakpointResponse(token);
+        }
+        return standardResponse(command, token);
+    });
+    await harness.session.connect('localhost:3333');
+
+    const stack = (body: string) => (token: number) =>
+        body === '' ? `${token}^done\n` : `${token}^done,${body}\n`;
+    const stackCases: Array<{ label: string; code: string; response: (token: number) => string }> = [
+        { label: 'missing stack', code: 'protocol', response: stack('') },
+        { label: 'stack not a list', code: 'protocol', response: stack('stack={}') },
+        { label: 'frame not a tuple', code: 'protocol', response: stack('stack=["x"]') },
+        { label: 'frame without level', code: 'protocol', response: stack('stack=[frame={addr="0x1"}]') },
+        { label: 'frame without address', code: 'protocol', response: stack('stack=[frame={level="0"}]') },
+        { label: 'invalid frame level', code: 'protocol', response: stack('stack=[frame={level="x",addr="0x1"}]') },
+        { label: 'invalid frame address', code: 'protocol', response: stack('stack=[frame={level="0",addr="x"}]') },
+        { label: 'non-string frame function', code: 'protocol', response: stack('stack=[frame={level="0",addr="0x1",func=1}]') },
+        { label: 'non-string frame line', code: 'protocol', response: stack('stack=[frame={level="0",addr="0x1",line=1}]') },
+        { label: 'target error', code: 'target', response: token => `${token}^error,msg="No registers."\n` },
+    ];
+    for (const testCase of stackCases) {
+        stackResponse = testCase.response;
+        const failure = await captureReject(harness.session.backtrace(), `backtrace ${testCase.label}`);
+        assertEqual(failure.code, testCase.code, `backtrace ${testCase.label} code`);
+    }
+    stackResponse = undefined;
+
+    const table = (body: string) => (token: number) =>
+        `${token}^done,BreakpointTable={nr_rows="1",nr_cols="6",hdr=[],body=${body}}\n`;
+    const breakpointCases: Array<{ label: string; code: string; response: (token: number) => string }> = [
+        { label: 'missing table', code: 'protocol', response: token => `${token}^done\n` },
+        { label: 'table not a tuple', code: 'protocol', response: token => `${token}^done,BreakpointTable=[]\n` },
+        { label: 'missing body', code: 'protocol', response: token => `${token}^done,BreakpointTable={nr_rows="0"}\n` },
+        { label: 'body not a list', code: 'protocol', response: token => `${token}^done,BreakpointTable={body={}}\n` },
+        { label: 'entry not a tuple', code: 'protocol', response: table('["x"]') },
+        { label: 'bkpt not a tuple', code: 'protocol', response: table('[bkpt="x"]') },
+        { label: 'missing number', code: 'protocol', response: table('[bkpt={type="breakpoint",enabled="y"}]') },
+        { label: 'invalid number', code: 'protocol', response: table('[bkpt={number="x",type="breakpoint",enabled="y"}]') },
+        { label: 'missing type', code: 'protocol', response: table('[bkpt={number="1",enabled="y"}]') },
+        { label: 'missing enabled', code: 'protocol', response: table('[bkpt={number="1",type="breakpoint"}]') },
+        { label: 'invalid enabled', code: 'protocol', response: table('[bkpt={number="1",type="breakpoint",enabled="yes"}]') },
+        { label: 'invalid address', code: 'protocol', response: table('[bkpt={number="1",type="breakpoint",enabled="y",addr="bad"}]') },
+        { label: 'invalid hit count', code: 'protocol', response: table('[bkpt={number="1",type="breakpoint",enabled="y",times="many"}]') },
+        { label: 'location without breakpoint', code: 'protocol', response: table('[{number="1.1",enabled="y"}]') },
+        { label: 'locations not a list', code: 'protocol', response: table('[bkpt={number="1",type="breakpoint",enabled="y",locations={}}]') },
+        { label: 'target error', code: 'target', response: token => `${token}^error,msg="No breakpoints."\n` },
+    ];
+    for (const testCase of breakpointCases) {
+        breakpointResponse = testCase.response;
+        const failure = await captureReject(
+            harness.session.listBreakpoints(),
+            `breakpoint list ${testCase.label}`,
+        );
+        assertEqual(failure.code, testCase.code, `breakpoint list ${testCase.label} code`);
+    }
+    await harness.session.disconnect();
+}
+
 async function run(): Promise<void> {
     await testConnectAndDisconnect();
     await testConnectErrors();
     await testRegisterAndMemory();
     await testBreakpointsAndEvaluation();
+    await testBacktraceAndBreakpointList();
+    await testBacktraceAndBreakpointErrors();
     await testStopsAndInterrupt();
     await testCommandFailureModes();
     console.log('debug-mi-session tests passed');

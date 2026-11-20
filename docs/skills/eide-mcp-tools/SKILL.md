@@ -19,7 +19,7 @@ groups, env.ini expansion, and virtual source folders.
 | Mode | How it is configured | Requires VS Code | Tools |
 |------|----------------------|------------------|-------|
 | VS Code HTTP MCP | `http://localhost:8940/mcp` plus `EIDE.MCP.Server.Enable` | Yes, with the project open | 21 project/build tools |
-| Headless stdio MCP | `eide-mcp` or `node dist/eide_mcp.js --project ...` | No | 33 tools, including 12 debug tools |
+| Headless stdio MCP | `eide-mcp` or `node dist/eide_mcp.js --project ...` | No | 35 tools, including 14 debug tools |
 
 If `eide_debug_*` tools are present, it is the headless server. The headless
 server discovers its projects from launch arguments, so there is no "add
@@ -215,6 +215,8 @@ before connecting; the default ELF is
 | `eide_debug_write_memory` | `uid`, `address`, even-length `hex` |
 | `eide_debug_set_breakpoint` | `uid`, `location` (symbol, `file:line`, or address), `hardware?`, `condition?` |
 | `eide_debug_remove_breakpoint` | `uid`, `id` |
+| `eide_debug_backtrace` | `uid`, `maxDepth?` (1–200, default all frames) |
+| `eide_debug_list_breakpoints` | `uid` |
 | `eide_debug_continue` | `uid`, `stopTimeoutMs?` (default 30000) |
 | `eide_debug_interrupt` | `uid` |
 | `eide_debug_evaluate` | `uid`, `expression` |
@@ -222,9 +224,12 @@ before connecting; the default ELF is
 | `eide_debug_svd_lookup` | `uid`, `path` (relative SVD path), plus `address?` or `peripheral?` or `register?` |
 
 Addresses accept a number or a `0x`-prefixed string. `eide_debug_fault` reads
-HFSR/CFSR/MMAR/BFAR from the active session when values are omitted. The session
-stays active until disconnect or server exit; only one session can exist at a
-time.
+HFSR/CFSR/MMAR/BFAR from the active session when values are omitted.
+`eide_debug_backtrace` returns frames with level, address, and optional
+function/file/line/fullname. `eide_debug_list_breakpoints` returns breakpoint
+type, enabled state, address, source location, condition, hit count, and nested
+locations for multi-location breakpoints. The session stays active until
+disconnect or server exit; only one session can exist at a time.
 
 Debug workflow:
 
@@ -232,6 +237,8 @@ Debug workflow:
 eide_debug_connect(uid, target="localhost:3333")
 eide_debug_set_breakpoint(uid, location="main")
 eide_debug_continue(uid)
+eide_debug_backtrace(uid, maxDepth=20)
+eide_debug_list_breakpoints(uid)
 eide_debug_read_register(uid, name="pc")
 eide_debug_evaluate(uid, expression="counter")
 eide_debug_fault(uid)

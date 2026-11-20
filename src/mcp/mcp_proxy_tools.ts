@@ -439,6 +439,30 @@ export function createMcpServer(
         );
 
         server.registerTool(
+            'eide_debug_backtrace',
+            {
+                title: 'Get Backtrace',
+                description: 'Get the current call stack from the active debug session.',
+                inputSchema: {
+                    uid: uidSchema,
+                    maxDepth: z.number().int().min(1).max(200).optional().describe(
+                        'Maximum number of frames to return (default: all frames).')
+                }
+            },
+            async (args) => delegateToolCall('eide_debug_backtrace', args)
+        );
+
+        server.registerTool(
+            'eide_debug_list_breakpoints',
+            {
+                title: 'List Breakpoints',
+                description: 'List breakpoints with type, enabled state, address, source location, condition, hit count, and multiple locations when present.',
+                inputSchema: { uid: uidSchema }
+            },
+            async (args) => delegateToolCall('eide_debug_list_breakpoints', args)
+        );
+
+        server.registerTool(
             'eide_debug_continue',
             {
                 title: 'Continue Execution',

@@ -316,4 +316,204 @@ assertParseError(
     'duplicate peripheral name',
 );
 
+const DERIVED_SVD = `<device>
+  <name>DerivedDevice</name>
+  <peripherals>
+    <peripheral derivedFrom="GPIOA">
+      <name>GPIOB</name>
+      <baseAddress>0x40020400</baseAddress>
+    </peripheral>
+    <peripheral>
+      <name>GPIOA</name>
+      <description>GPIO base</description>
+      <baseAddress>0x40020000</baseAddress>
+      <addressBlock>
+        <offset>0x0</offset>
+        <size>0x400</size>
+        <usage>registers</usage>
+      </addressBlock>
+      <registers>
+        <register>
+          <name>MODER</name>
+          <description>Mode register</description>
+          <addressOffset>0x0</addressOffset>
+          <size>32</size>
+          <resetValue>0xFFFFFFFF</resetValue>
+          <fields>
+            <field>
+              <name>MODE0</name>
+              <description>Mode 0</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>2</bitWidth>
+              <access>read-write</access>
+            </field>
+            <field derivedFrom="MODE0">
+              <name>MODE1</name>
+              <description>Mode 1 derived</description>
+              <bitOffset>2</bitOffset>
+              <access>read-only</access>
+            </field>
+            <field derivedFrom="MODE0">
+              <name>MODE2</name>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>IDR</name>
+          <addressOffset>0x10</addressOffset>
+        </register>
+        <register derivedFrom="MODER">
+          <name>ALT</name>
+          <description>Alternate mode register</description>
+          <addressOffset>0x4</addressOffset>
+          <size>16</size>
+        </register>
+      </registers>
+    </peripheral>
+    <peripheral derivedFrom="GPIOA">
+      <name>GPIOC</name>
+    </peripheral>
+    <peripheral>
+      <name>TIM</name>
+      <baseAddress>0x40000000</baseAddress>
+      <registers>
+        <register derivedFrom="GPIOA.MODER">
+          <name>CR</name>
+          <addressOffset>0x0</addressOffset>
+        </register>
+        <register>
+          <name>DUP</name>
+          <addressOffset>0x4</addressOffset>
+          <fields>
+            <field derivedFrom="GPIOA.MODER.MODE0">
+              <name>MIRROR</name>
+            </field>
+          </fields>
+        </register>
+      </registers>
+    </peripheral>
+  </peripherals>
+</device>`;
+
+const derivedModel = SvdModel.parse(DERIVED_SVD);
+const gpioA = derivedModel.findPeripheral('GPIOA')!;
+const gpioB = derivedModel.findPeripheral('GPIOB')!;
+const gpioC = derivedModel.findPeripheral('GPIOC')!;
+assertEqual(gpioB.description, 'GPIO base', 'derived peripheral inherits description');
+assertEqual(gpioB.baseAddress, 0x40020400, 'derived peripheral overrides base address');
+assertEqual(gpioB.addressBlocks.length, 1, 'derived peripheral inherits address blocks');
+assertEqual(gpioB.registers.length, 3, 'derived peripheral inherits registers');
+assertEqual(gpioC.baseAddress, gpioA.baseAddress, 'derived peripheral inherits base address');
+
+const derivedAlt = derivedModel.findRegister('GPIOA', 'ALT');
+assert(derivedAlt !== undefined, 'derived register exists in base peripheral');
+assertEqual(derivedAlt!.name, 'ALT', 'derived register overrides name');
+assertEqual(derivedAlt!.addressOffset, 0x4, 'derived register overrides address offset');
+assertEqual(derivedAlt!.address, 0x40020004, 'derived register address');
+assertEqual(derivedAlt!.description, 'Alternate mode register', 'derived register overrides description');
+assertEqual(derivedAlt!.size, 16, 'derived register overrides size');
+assertEqual(derivedAlt!.resetValue, 0xffffffff, 'derived register inherits reset value');
+assertEqual(fieldNames(derivedAlt!), 'MODE0,MODE1,MODE2', 'derived register inherits fields');
+const gpioBAlt = derivedModel.findRegister('GPIOB', 'ALT');
+assert(gpioBAlt !== undefined, 'derived peripheral inherits derived register');
+assertEqual(gpioBAlt!.address, 0x40020404, 'inherited derived register address');
+
+const mode1 = derivedAlt!.fields[1];
+assertEqual(mode1.bitOffset, 2, 'derived field overrides bit offset');
+assertEqual(mode1.bitWidth, 2, 'derived field inherits bit width');
+assertEqual(mode1.access, 'read-only', 'derived field overrides access');
+assertEqual(mode1.description, 'Mode 1 derived', 'derived field overrides description');
+const mode2 = derivedAlt!.fields[2];
+assertEqual(mode2.bitOffset, 0, 'derived field inherits bit offset');
+assertEqual(mode2.bitWidth, 2, 'derived field inherits bit width');
+assertEqual(mode2.access, 'read-write', 'derived field inherits access');
+assertEqual(mode2.description, 'Mode 0', 'derived field inherits description');
+
+const crossRegister = derivedModel.findRegister('TIM', 'CR');
+assert(crossRegister !== undefined, 'cross-peripheral derived register');
+assertEqual(crossRegister!.address, 0x40000000, 'cross-peripheral derived register address');
+assertEqual(crossRegister!.size, 32, 'cross-peripheral derived register inherits size');
+assertEqual(crossRegister!.resetValue, 0xffffffff, 'cross-peripheral register inherits reset value');
+assertEqual(fieldNames(crossRegister!), 'MODE0,MODE1,MODE2', 'cross-peripheral register inherits fields');
+const mirror = derivedModel.findRegister('TIM', 'DUP')!.fields[0];
+assertEqual(mirror.bitOffset, 0, 'qualified derived field inherits bit offset');
+assertEqual(mirror.bitWidth, 2, 'qualified derived field inherits bit width');
+assertEqual(mirror.access, 'read-write', 'qualified derived field inherits access');
+assertEqual(
+    derivedModel.findRegisterAt(0x40020404)?.register.name,
+    'ALT',
+    'derived register address lookup',
+);
+assertEqual(
+    derivedModel.findPeripheralAt(0x40020400)?.peripheral.name,
+    'GPIOB',
+    'derived peripheral block lookup',
+);
+
+const derivedDimension = SvdModel.parse(
+    '<device><name>Dim</name><peripherals><peripheral><name>P</name><baseAddress>0x1000</baseAddress><registers>' +
+    '<register><name>CH%s</name><dim>2</dim><dimIncrement>4</dimIncrement><addressOffset>0x20</addressOffset>' +
+    '<fields><field><name>EN%s</name><dim>2</dim><dimIncrement>1</dimIncrement><bitOffset>0</bitOffset><bitWidth>1</bitWidth></field></fields></register>' +
+    '<register derivedFrom="CH%s"><name>DS%s</name><addressOffset>0x30</addressOffset></register>' +
+    '</registers></peripheral></peripherals></device>',
+);
+assertEqual(
+    derivedDimension.device.peripherals[0].registers.map(register => register.name).join(','),
+    'CH0,CH1,DS0,DS1',
+    'derived register inherits dimension names',
+);
+assertEqual(
+    derivedDimension.device.peripherals[0].registers.map(register => register.address).join(','),
+    '4128,4132,4144,4148',
+    'derived register inherits dimension addresses',
+);
+assertEqual(
+    fieldNames(derivedDimension.device.peripherals[0].registers[3]),
+    'EN0,EN1',
+    'derived register inherits dimensioned fields',
+);
+
+assertParseError(
+    () =>
+        parseSvd(
+            '<device><name>X</name><peripherals><peripheral derivedFrom="NOPE"><name>P</name><baseAddress>0x0</baseAddress></peripheral></peripherals></device>',
+        ),
+    'unknown derived peripheral',
+);
+assertParseError(
+    () =>
+        parseSvd(
+            '<device><name>X</name><peripherals><peripheral><name>P</name><baseAddress>0x0</baseAddress><registers><register derivedFrom="NOPE"><name>R</name><addressOffset>0x0</addressOffset></register></registers></peripheral></peripherals></device>',
+        ),
+    'unknown derived register',
+);
+assertParseError(
+    () =>
+        parseSvd(
+            '<device><name>X</name><peripherals><peripheral><name>P</name><baseAddress>0x0</baseAddress><registers><register><name>R</name><addressOffset>0x0</addressOffset><fields><field derivedFrom="NOPE"><name>F</name><bitOffset>0</bitOffset><bitWidth>1</bitWidth></field></fields></register></registers></peripheral></peripherals></device>',
+        ),
+    'unknown derived field',
+);
+assertParseError(
+    () =>
+        parseSvd(
+            '<device><name>X</name><peripherals><peripheral derivedFrom="B"><name>A</name><baseAddress>0x0</baseAddress></peripheral><peripheral derivedFrom="A"><name>B</name><baseAddress>0x0</baseAddress></peripheral></peripherals></device>',
+        ),
+    'peripheral derivedFrom cycle',
+);
+assertParseError(
+    () =>
+        parseSvd(
+            '<device><name>X</name><peripherals><peripheral><name>P</name><baseAddress>0x0</baseAddress><registers><register derivedFrom="R2"><name>R1</name><addressOffset>0x0</addressOffset></register><register derivedFrom="R1"><name>R2</name><addressOffset>0x4</addressOffset></register></registers></peripheral></peripherals></device>',
+        ),
+    'register derivedFrom cycle',
+);
+assertParseError(
+    () =>
+        parseSvd(
+            '<device><name>X</name><peripherals><peripheral><name>P</name><baseAddress>0x0</baseAddress><registers><register><name>R</name><addressOffset>0x0</addressOffset><fields><field derivedFrom="F2"><name>F1</name><bitOffset>0</bitOffset><bitWidth>1</bitWidth></field><field derivedFrom="F1"><name>F2</name><bitOffset>1</bitOffset><bitWidth>1</bitWidth></field></fields></register></registers></peripheral></peripherals></device>',
+        ),
+    'field derivedFrom cycle',
+);
+
 console.log('debug-svd tests passed');
