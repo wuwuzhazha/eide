@@ -1,11 +1,11 @@
-#include <stdint.h>
+typedef unsigned int u32;
 
-extern uint32_t _estack;
-extern uint32_t _sidata;
-extern uint32_t _sdata;
-extern uint32_t _edata;
-extern uint32_t _sbss;
-extern uint32_t _ebss;
+extern u32 _estack;
+extern u32 _sidata;
+extern u32 _sdata;
+extern u32 _edata;
+extern u32 _sbss;
+extern u32 _ebss;
 extern int main(void);
 
 void Reset_Handler(void);
@@ -18,8 +18,8 @@ void (* const g_vectors[])(void) = {
 
 void Reset_Handler(void)
 {
-    uint32_t *source = &_sidata;
-    uint32_t *destination = &_sdata;
+    u32 *source = &_sidata;
+    u32 *destination = &_sdata;
     while (destination < &_edata) {
         *destination++ = *source++;
     }
