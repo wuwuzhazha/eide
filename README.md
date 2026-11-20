@@ -8,7 +8,7 @@ RISC-V, MIPS, and arbitrary GCC targets; builds them with their native
 toolchains; flashes devices through supported uploaders; and exposes the same
 project and build model through a CLI and MCP server.
 
-[![Repository](https://img.shields.io/badge/repo-wuwuzhazha%2Feide-pro-blue)](https://github.com/wuwuzhazha/eide-pro)
+[![Repository](https://img.shields.io/badge/repo-qxzurfru%2Feide-pro-blue)](https://github.com/wuwuzhazha/eide-pro)
 [![Release](https://img.shields.io/github/v/release/wuwuzhazha/eide-pro)](https://github.com/wuwuzhazha/eide-pro/releases)
 [![Open VSX](https://img.shields.io/open-vsx/v/wuwuzhazha/eide-pro)](https://open-vsx.org/extension/wuwuzhazha/eide-pro)
 [![License](https://img.shields.io/github/license/wuwuzhazha/eide-pro)](./LICENSE)

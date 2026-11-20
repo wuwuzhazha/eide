@@ -7,7 +7,7 @@ ARM Cortex-M、8051/STM8、RISC-V、MIPS 以及任意 GCC 目标的 EIDE 工程�
 平台的原生工具链构建工程；通过受支持的烧录器烧录设备；并通过 CLI 和 MCP 服务器
 对外提供与扩展相同的工程模型和构建模型。
 
-[![仓库](https://img.shields.io/badge/repo-wuwuzhazha%2Feide-pro-blue)](https://github.com/wuwuzhazha/eide-pro)
+[![仓库](https://img.shields.io/badge/repo-qxzurfru%2Feide-pro-blue)](https://github.com/wuwuzhazha/eide-pro)
 [![发布](https://img.shields.io/github/v/release/wuwuzhazha/eide-pro)](https://github.com/wuwuzhazha/eide-pro/releases)
 [![Open VSX](https://img.shields.io/open-vsx/v/wuwuzhazha/eide-pro)](https://open-vsx.org/extension/wuwuzhazha/eide-pro)
 [![许可证](https://img.shields.io/github/license/wuwuzhazha/eide-pro)](./LICENSE)
