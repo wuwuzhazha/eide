@@ -71,7 +71,7 @@ it from the command line or with **Extensions: Install from VSIX...** in VS
 Code:
 
 ```bash
-code --install-extension ./eide-pro-4.1.0.vsix
+code --install-extension ./eide-pro-4.1.1.vsix
 ```
 
 ### Headless CLI and MCP

@@ -64,7 +64,7 @@ Open VSX 的编辑器（例如 VSCodium 或 code-server）中执行该命令。�
 **Extensions: Install from VSIX...** 安装：
 
 ```bash
-code --install-extension ./eide-pro-4.1.0.vsix
+code --install-extension ./eide-pro-4.1.1.vsix
 ```
 
 ### Headless CLI 与 MCP

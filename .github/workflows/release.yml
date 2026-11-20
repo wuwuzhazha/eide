@@ -85,6 +85,19 @@ jobs:
           VERSION: ${{ steps.version.outputs.version }}
         run: npx --yes @vscode/vsce@2.15.0 package --out "eide-pro-${VERSION}.vsix"
 
+      - name: Verify VSIX contents
+        shell: bash
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          unexpected="$(unzip -Z1 "eide-pro-${VERSION}.vsix" \
+            | grep -E '^extension/(artifacts|coverage|out|src|test|scripts)/' || true)"
+          if [ -n "$unexpected" ]; then
+            echo "::error::VSIX contains development or packaging output:"
+            echo "$unexpected"
+            exit 1
+          fi
+
       - name: Package MCP skill archive
         shell: bash
         run: |
