@@ -56,6 +56,8 @@ export function createMcpServer(
     );
 
     const uidSchema = z.string().describe('Project UID (cannot be empty). You can get it from "<Your workspace>/.eide/eide.yml", property name is "miscInfo.uid"');
+    const stopTimeoutSchema = z.number().int().positive().optional().describe(
+        'Stop-event timeout in milliseconds (default: 30000).');
 
     const overridesSchema = z.object({
         defines: z.array(z.string()).optional().describe('Additional preprocessor defines (NAME or NAME=VALUE).'),
@@ -463,17 +465,108 @@ export function createMcpServer(
         );
 
         server.registerTool(
+            'eide_debug_list_threads',
+            {
+                title: 'List Threads',
+                description: 'List target threads with id, target id, name, state, and current frame.',
+                inputSchema: { uid: uidSchema }
+            },
+            async (args) => delegateToolCall('eide_debug_list_threads', args)
+        );
+
+        server.registerTool(
+            'eide_debug_select_thread',
+            {
+                title: 'Select Thread',
+                description: 'Switch the debugger to a thread by id and return its current frame.',
+                inputSchema: {
+                    uid: uidSchema,
+                    id: z.number().int().positive().describe('Thread id from eide_debug_list_threads.')
+                }
+            },
+            async (args) => delegateToolCall('eide_debug_select_thread', args)
+        );
+
+        server.registerTool(
+            'eide_debug_select_frame',
+            {
+                title: 'Select Stack Frame',
+                description: 'Select a stack frame on the current thread before evaluating variables.',
+                inputSchema: {
+                    uid: uidSchema,
+                    level: z.number().int().nonnegative().describe(
+                        'Frame level from eide_debug_backtrace; 0 is the innermost frame.')
+                }
+            },
+            async (args) => delegateToolCall('eide_debug_select_frame', args)
+        );
+
+        server.registerTool(
+            'eide_debug_list_variables',
+            {
+                title: 'List Variables',
+                description: 'List local variables and arguments for the current or selected thread and frame.',
+                inputSchema: {
+                    uid: uidSchema,
+                    threadId: z.number().int().positive().optional().describe(
+                        'Thread id; defaults to the current thread.'),
+                    frameLevel: z.number().int().nonnegative().optional().describe(
+                        'Frame level; defaults to the selected frame.')
+                }
+            },
+            async (args) => delegateToolCall('eide_debug_list_variables', args)
+        );
+
+        server.registerTool(
             'eide_debug_continue',
             {
                 title: 'Continue Execution',
                 description: 'Resume the target and wait for the next stop event.',
                 inputSchema: {
                     uid: uidSchema,
-                    stopTimeoutMs: z.number().int().positive().optional().describe(
-                        'Stop-event timeout in milliseconds (default: 30000).')
+                    stopTimeoutMs: stopTimeoutSchema
                 }
             },
             async (args) => delegateToolCall('eide_debug_continue', args)
+        );
+
+        server.registerTool(
+            'eide_debug_step_over',
+            {
+                title: 'Step Over',
+                description: 'Step over the current source line and wait for the next stop event.',
+                inputSchema: {
+                    uid: uidSchema,
+                    stopTimeoutMs: stopTimeoutSchema
+                }
+            },
+            async (args) => delegateToolCall('eide_debug_step_over', args)
+        );
+
+        server.registerTool(
+            'eide_debug_step_into',
+            {
+                title: 'Step Into',
+                description: 'Step into the next function call and wait for the next stop event.',
+                inputSchema: {
+                    uid: uidSchema,
+                    stopTimeoutMs: stopTimeoutSchema
+                }
+            },
+            async (args) => delegateToolCall('eide_debug_step_into', args)
+        );
+
+        server.registerTool(
+            'eide_debug_step_out',
+            {
+                title: 'Step Out',
+                description: 'Run until the current function returns and wait for the next stop event.',
+                inputSchema: {
+                    uid: uidSchema,
+                    stopTimeoutMs: stopTimeoutSchema
+                }
+            },
+            async (args) => delegateToolCall('eide_debug_step_out', args)
         );
 
         server.registerTool(

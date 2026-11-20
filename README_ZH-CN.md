@@ -64,7 +64,7 @@ Open VSX 的编辑器（例如 VSCodium 或 code-server）中执行该命令。�
 **Extensions: Install from VSIX...** 安装：
 
 ```bash
-code --install-extension ./eide-pro-4.1.1.vsix
+code --install-extension ./eide-pro-4.2.0.vsix
 ```
 
 ### Headless CLI 与 MCP
@@ -147,8 +147,9 @@ eide-mcp \
 
 stdio 服务器提供工程 build/rebuild、clean、flash、目标/源码/头文件路径配置、
 栈使用量和调用图工具。使用 `--gdb` 启动时，还会提供基于 GDB 的工具，用于连接、
-读取寄存器和内存、设置和列出断点、获取调用栈、继续和中断执行、求值表达式、
-解码 Cortex-M fault，以及查找 SVD 符号（支持 `derivedFrom` 继承）。
+读取寄存器和内存、设置和列出断点、获取调用栈、选择线程和栈帧、读取局部变量、
+单步执行（over/into/out）、继续和中断执行、求值表达式、解码 Cortex-M fault，
+以及查找 SVD 符号（支持 `derivedFrom` 继承）。
 
 VS Code 还提供 HTTP MCP 服务器。通过 `EIDE.MCP.Server.Enable` 启用，并通过
 `EIDE.MCP.Server.Port` 设置端口（默认 `8940`）。

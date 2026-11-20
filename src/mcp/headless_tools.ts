@@ -304,8 +304,22 @@ class HeadlessToolRunner {
                 return makeJsonResult(await this.debug.backtrace(args.maxDepth));
             case 'eide_debug_list_breakpoints':
                 return makeJsonResult(await this.debug.listBreakpoints());
+            case 'eide_debug_list_threads':
+                return makeJsonResult(await this.debug.listThreads());
+            case 'eide_debug_select_thread':
+                return makeJsonResult(await this.debug.selectThread(args.id));
+            case 'eide_debug_select_frame':
+                return makeJsonResult(await this.debug.selectFrame(args.level));
+            case 'eide_debug_list_variables':
+                return makeJsonResult(await this.debug.listVariables(args));
             case 'eide_debug_continue':
                 return makeJsonResult(await this.debug.continue(args.stopTimeoutMs));
+            case 'eide_debug_step_over':
+                return makeJsonResult(await this.debug.stepOver(args.stopTimeoutMs));
+            case 'eide_debug_step_into':
+                return makeJsonResult(await this.debug.stepInto(args.stopTimeoutMs));
+            case 'eide_debug_step_out':
+                return makeJsonResult(await this.debug.stepOut(args.stopTimeoutMs));
             case 'eide_debug_interrupt':
                 return makeJsonResult(await this.debug.interrupt());
             case 'eide_debug_evaluate':

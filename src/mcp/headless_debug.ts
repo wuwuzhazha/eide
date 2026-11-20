@@ -1,7 +1,16 @@
 import * as fs from 'fs';
 import * as NodePath from 'path';
 import { decodeCortexFault } from '../core/debug/fault';
-import { MiBreakpointRecord, MiFrame, MiSession, MiSpawn, MiStopEvent } from '../core/debug/mi';
+import {
+    MiBreakpointRecord,
+    MiFrame,
+    MiSession,
+    MiSpawn,
+    MiStopEvent,
+    MiThreadList,
+    MiVariable,
+    MiVariableOptions
+} from '../core/debug/mi';
 import { SvdModel } from '../core/debug/svd';
 import { HeadlessProject } from './headless_project';
 
@@ -13,6 +22,21 @@ export interface DebugSessionOptions {
     spawn?: MiSpawn;
     commandTimeoutMs?: number;
     stopTimeoutMs?: number;
+}
+
+function parseIntegerValue(value: unknown, name: string, minimum: number): number {
+    let parsed: number;
+    if (typeof value === 'number') {
+        parsed = value;
+    } else if (typeof value === 'string' && /^\d+$/.test(value.trim())) {
+        parsed = Number(value.trim());
+    } else {
+        throw new Error(`'${name}' must be an integer.`);
+    }
+    if (!Number.isSafeInteger(parsed) || parsed < minimum) {
+        throw new Error(`'${name}' must be an integer greater than or equal to ${minimum}.`);
+    }
+    return parsed;
 }
 
 function parseAddressValue(value: unknown, name: string): number {
@@ -158,12 +182,59 @@ export class HeadlessDebugSession {
         return this.requireSession().listBreakpoints();
     }
 
+    async listThreads(): Promise<MiThreadList> {
+        return this.requireSession().listThreads();
+    }
+
+    async selectThread(id: unknown): Promise<any> {
+        const threadId = parseIntegerValue(id, 'id', 1);
+        const frame = await this.requireSession().selectThread(threadId);
+        return { threadId, frame: frame ?? null };
+    }
+
+    async selectFrame(level: unknown): Promise<any> {
+        const frameLevel = parseIntegerValue(level, 'level', 0);
+        await this.requireSession().selectFrame(frameLevel);
+        return { success: true, level: frameLevel };
+    }
+
+    async listVariables(args: Record<string, unknown>): Promise<any> {
+        const options: MiVariableOptions = {};
+        if (args.threadId !== undefined) {
+            options.threadId = parseIntegerValue(args.threadId, 'threadId', 1);
+        }
+        if (args.frameLevel !== undefined) {
+            options.frameLevel = parseIntegerValue(args.frameLevel, 'frameLevel', 0);
+        }
+        const variables: MiVariable[] = await this.requireSession().listVariables(options);
+        return { ...options, variables };
+    }
+
     async continue(stopTimeoutMs: unknown): Promise<MiStopEvent> {
-        const session = this.requireSession();
-        await session.continue();
+        return this.runAndWait(session => session.continue(), stopTimeoutMs);
+    }
+
+    async stepOver(stopTimeoutMs: unknown): Promise<MiStopEvent> {
+        return this.runAndWait(session => session.stepOver(), stopTimeoutMs);
+    }
+
+    async stepInto(stopTimeoutMs: unknown): Promise<MiStopEvent> {
+        return this.runAndWait(session => session.stepInto(), stopTimeoutMs);
+    }
+
+    async stepOut(stopTimeoutMs: unknown): Promise<MiStopEvent> {
+        return this.runAndWait(session => session.stepOut(), stopTimeoutMs);
+    }
+
+    private async runAndWait(
+        action: (session: MiSession) => Promise<void>,
+        stopTimeoutMs: unknown
+    ): Promise<MiStopEvent> {
         const timeout = stopTimeoutMs === undefined
             ? this.options.stopTimeoutMs
-            : parseAddressValue(stopTimeoutMs, 'stopTimeoutMs');
+            : parseIntegerValue(stopTimeoutMs, 'stopTimeoutMs', 1);
+        const session = this.requireSession();
+        await action(session);
         return timeout === undefined ? session.waitForStop() : session.waitForStop(timeout);
     }
 
