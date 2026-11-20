@@ -2,6 +2,8 @@
 .github
 .vscode
 .vscode-test
+artifacts
+coverage
 out
 src
 .EIDE
