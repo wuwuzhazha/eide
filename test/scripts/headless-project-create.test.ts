@@ -101,6 +101,11 @@ async function run(): Promise<void> {
     const configPath = NodePath.join(root, 'demo-fw', '.eide', 'eide.yml');
     const config = yaml.parse(fs.readFileSync(configPath, 'utf8'));
     assert(config.version === '4.1', 'create: config version is current');
+    const scatter = config.targets.Debug.toolchainConfigMap.GCC.scatterFilePath;
+    assert(!scatter.includes('\\') && !scatter.startsWith('./'),
+        'create: template paths use portable separators');
+    assert(fs.existsSync(NodePath.join(root, 'demo-fw', scatter)),
+        'create: scatter file path resolves on this platform');
     assert(config.name === 'Display Name', 'create: config project name');
     assert(config.miscInfo.uid === result.uid, 'create: config uid');
     assert(!fs.existsSync(NodePath.join(root, 'demo-fw', '.eide', 'eide.json')),

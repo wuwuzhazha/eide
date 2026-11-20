@@ -87,6 +87,35 @@ function extractTemplate(templateFile: string, targetDir: string, resourcesDir: 
     }
 }
 
+function normalizePathSeparators(config: any): void {
+    if (config === null || typeof config !== 'object') {
+        return;
+    }
+    if (Array.isArray(config)) {
+        for (const item of config) {
+            normalizePathSeparators(item);
+        }
+        return;
+    }
+    const pathKeys = ['scatterFilePath', 'srcDirs', 'incList', 'libList', 'excludeList', 'path'];
+    for (const key of Object.keys(config)) {
+        const value = config[key];
+        if (pathKeys.includes(key) && typeof value === 'string') {
+            config[key] = value.replace(/\\/g, '/').replace(/^\.\//, '');
+        } else if (Array.isArray(value)) {
+            for (let index = 0; index < value.length; index++) {
+                if (typeof value[index] === 'string') {
+                    value[index] = value[index].replace(/\\/g, '/');
+                } else {
+                    normalizePathSeparators(value[index]);
+                }
+            }
+        } else if (value !== null && typeof value === 'object') {
+            normalizePathSeparators(value);
+        }
+    }
+}
+
 function readConfig(projectDir: string): { config: any; file: string } {
     const jsonFile = NodePath.join(projectDir, '.eide', 'eide.json');
     const ymlFile = NodePath.join(projectDir, '.eide', 'eide.yml');
@@ -145,6 +174,7 @@ export function createProject(options: CreateProjectOptions): CreateProjectResul
     if (needsProjectConfigMigration(config)) {
         migrateProjectConfig(config);
     }
+    normalizePathSeparators(config);
     config.version = CURRENT_CONFIG_VERSION;
     config.name = options.projectName || name;
     config.miscInfo = config.miscInfo || {};
