@@ -423,6 +423,29 @@ export interface MiFrame {
     fullName?: string;
 }
 
+export interface MiThread {
+    id: number;
+    targetId?: string;
+    name?: string;
+    state?: string;
+    frame?: MiFrame;
+}
+
+export interface MiThreadList {
+    threads: MiThread[];
+    currentThreadId?: number;
+}
+
+export interface MiVariable {
+    name: string;
+    value?: string;
+}
+
+export interface MiVariableOptions {
+    threadId?: number;
+    frameLevel?: number;
+}
+
 export interface MiBreakpointLocation {
     number: string;
     enabled: boolean;
@@ -719,6 +742,68 @@ export class MiSession {
         });
     }
 
+    async listThreads(): Promise<MiThreadList> {
+        const record = await this.runCommand('-thread-info', ['done']);
+        const threadsRaw = record.results.threads;
+        if (!Array.isArray(threadsRaw)) {
+            throw new MiError('protocol', 'thread info response has no thread list');
+        }
+        const threads = threadsRaw.map((value, index) =>
+            parseMiThread(value, `threads[${index}]`));
+        const currentRaw = record.results['current-thread-id'];
+        if (currentRaw === undefined) {
+            return { threads };
+        }
+        if (typeof currentRaw !== 'string') {
+            throw new MiError('protocol', 'thread info current-thread-id is not a string');
+        }
+        return {
+            threads,
+            currentThreadId: parsePositiveDecimalInteger(currentRaw, 'current-thread-id'),
+        };
+    }
+
+    async selectThread(id: number): Promise<MiFrame | undefined> {
+        if (!Number.isSafeInteger(id) || id <= 0) {
+            throw new MiError('state', 'thread id must be a positive integer');
+        }
+        const record = await this.runCommand(`-thread-select ${id}`, ['done']);
+        const frameRaw = record.results.frame;
+        return frameRaw === undefined ? undefined : parseMiFrame(frameRaw, 'thread-select');
+    }
+
+    async selectFrame(level: number): Promise<void> {
+        if (!Number.isSafeInteger(level) || level < 0) {
+            throw new MiError('state', 'frame level must be a non-negative integer');
+        }
+        await this.runCommand(`-stack-select-frame ${level}`, ['done']);
+    }
+
+    async listVariables(options: MiVariableOptions = {}): Promise<MiVariable[]> {
+        if (options.threadId !== undefined
+            && (!Number.isSafeInteger(options.threadId) || options.threadId <= 0)) {
+            throw new MiError('state', 'variable thread id must be a positive integer');
+        }
+        if (options.frameLevel !== undefined
+            && (!Number.isSafeInteger(options.frameLevel) || options.frameLevel < 0)) {
+            throw new MiError('state', 'variable frame level must be a non-negative integer');
+        }
+        let command = '-stack-list-variables --all-values';
+        if (options.threadId !== undefined) {
+            command += ` --thread ${options.threadId}`;
+        }
+        if (options.frameLevel !== undefined) {
+            command += ` --frame ${options.frameLevel}`;
+        }
+        const record = await this.runCommand(command, ['done']);
+        const variablesRaw = record.results.variables;
+        if (!Array.isArray(variablesRaw)) {
+            throw new MiError('protocol', 'variable list response has no variables list');
+        }
+        return variablesRaw.map((value, index) =>
+            parseMiVariable(value, `variables[${index}]`));
+    }
+
     async listBreakpoints(): Promise<MiBreakpointRecord[]> {
         const record = await this.runCommand('-break-list', ['done']);
         const tableRaw = record.results.BreakpointTable;
@@ -758,6 +843,18 @@ export class MiSession {
 
     async continue(): Promise<void> {
         await this.runCommand('-exec-continue', ['running', 'done']);
+    }
+
+    async stepOver(): Promise<void> {
+        await this.runCommand('-exec-next', ['running', 'done']);
+    }
+
+    async stepInto(): Promise<void> {
+        await this.runCommand('-exec-step', ['running', 'done']);
+    }
+
+    async stepOut(): Promise<void> {
+        await this.runCommand('-exec-finish', ['running', 'done']);
     }
 
     async interrupt(): Promise<void> {
@@ -1199,6 +1296,48 @@ function parseBreakpointEnabled(value: MiValue | undefined, context: string, all
     throw new MiError('protocol', `${context} has an invalid enabled flag: ${value}`);
 }
 
+function parseMiThread(value: MiValue, context: string): MiThread {
+    const tuple = requireMiTupleValue(value, `${context} is not a thread tuple`);
+    const idRaw = tuple.id;
+    if (typeof idRaw !== 'string') {
+        throw new MiError('protocol', `${context} has no thread id`);
+    }
+    const thread: MiThread = {
+        id: parsePositiveDecimalInteger(idRaw, `${context}.id`),
+    };
+    const targetId = optionalMiString(tuple, 'target-id', context);
+    if (targetId !== undefined) {
+        thread.targetId = targetId;
+    }
+    const name = optionalMiString(tuple, 'name', context);
+    if (name !== undefined) {
+        thread.name = name;
+    }
+    const state = optionalMiString(tuple, 'state', context);
+    if (state !== undefined) {
+        thread.state = state;
+    }
+    const frame = tuple.frame;
+    if (frame !== undefined) {
+        thread.frame = parseMiFrame(frame, context);
+    }
+    return thread;
+}
+
+function parseMiVariable(value: MiValue, context: string): MiVariable {
+    const tuple = requireMiTupleValue(value, `${context} is not a variable tuple`);
+    const name = tuple.name;
+    if (typeof name !== 'string' || name === '') {
+        throw new MiError('protocol', `${context} has no variable name`);
+    }
+    const variable: MiVariable = { name };
+    const variableValue = optionalMiString(tuple, 'value', context);
+    if (variableValue !== undefined) {
+        variable.value = variableValue;
+    }
+    return variable;
+}
+
 function parseMiFrame(value: MiValue, context: string): MiFrame {
     const tuple = requireMiTupleValue(value, `${context} frame is not a tuple`);
     const levelRaw = tuple.level;
@@ -1342,6 +1481,14 @@ function parseDecimalInteger(text: string, context: string): number {
     const value = Number(text);
     if (!Number.isSafeInteger(value)) {
         throw new MiError('protocol', `${context} is not a safe integer: ${text}`);
+    }
+    return value;
+}
+
+function parsePositiveDecimalInteger(text: string, context: string): number {
+    const value = parseDecimalInteger(text, context);
+    if (value <= 0) {
+        throw new MiError('protocol', `${context} is not a positive integer: ${text}`);
     }
     return value;
 }
