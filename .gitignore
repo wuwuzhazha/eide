@@ -13,6 +13,15 @@ pack.js
 test.js
 *.js.map
 *.cpuprofile
+*.tsbuildinfo
+
+# release artifacts
+/artifacts/
+/coverage/
+
+# OS and editor files
+.DS_Store
+Thumbs.db
 
 # private
 /src/Telemetry
