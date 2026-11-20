@@ -49,6 +49,7 @@ bin/builder/*.exe.config
 bin/tools
 docs
 test
+scripts
 note.md
 
 # shell script
