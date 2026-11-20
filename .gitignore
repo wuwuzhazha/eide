@@ -35,7 +35,9 @@ Thumbs.db
 # internal template projects
 res/template/projects
 
-# E2E build output
+# E2E fixtures
+!test/e2e/fixtures/**/.eide/
+!test/e2e/fixtures/**/.eide/**
 test/e2e/fixtures/**/build/
 
 # bin
