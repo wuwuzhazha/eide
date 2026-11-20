@@ -66,6 +66,21 @@ interface DimensionExpansion {
     value: number;
 }
 
+interface RawElement {
+    node: Record<string, any>;
+    name: string;
+    path: string;
+}
+
+interface RawRegisterElement extends RawElement {
+    peripheralName: string;
+}
+
+interface RawFieldElement extends RawElement {
+    peripheralName: string;
+    registerName: string;
+}
+
 interface RegisterLocation {
     start: number;
     end: number;
@@ -94,7 +109,10 @@ export function parseSvd(xml: string): SvdDevice {
     const peripheralNodes =
         root.peripherals === ''
             ? []
-            : toArray(asObject(root.peripherals, 'device.peripherals').peripheral);
+            : resolveDerivedPeripherals(
+                toArray(asObject(root.peripherals, 'device.peripherals').peripheral),
+                'device.peripherals.peripheral',
+            );
     const peripherals: SvdPeripheral[] = [];
     for (let index = 0; index < peripheralNodes.length; index++) {
         peripherals.push(
@@ -209,6 +227,273 @@ function parseXml(xml: string): Record<string, any> {
         throw new SvdParseError(`invalid SVD XML: ${messageOf(error)}`);
     }
     return asObject(document, 'document');
+}
+
+function resolveDerivedPeripherals(values: unknown[], path: string): Record<string, any>[] {
+    const entries: RawElement[] = [];
+    for (let index = 0; index < values.length; index++) {
+        const elementPath = `${path}[${index}]`;
+        const node = asObject(values[index], elementPath);
+        entries.push({ node, name: requireText(node, 'name', elementPath), path: elementPath });
+    }
+    const byName = new Map<string, RawElement>();
+    for (const entry of entries) {
+        if (byName.has(entry.name)) {
+            throw new SvdParseError(`duplicate peripheral name: ${entry.name}`);
+        }
+        byName.set(entry.name, entry);
+    }
+    const resolved = resolveDerivedElements(
+        entries,
+        (entry, target) => byName.get(target),
+        mergeDerivedNode,
+    );
+    const nodes = entries.map(entry => resolved.get(entry)!);
+    const paths = entries.map(entry => entry.path);
+    resolveDerivedRegisters(nodes, paths);
+    resolveDerivedFields(nodes, paths);
+    return nodes;
+}
+
+function resolveDerivedRegisters(
+    peripherals: Record<string, any>[],
+    peripheralPaths: readonly string[],
+): void {
+    const scopes: Array<{ container: Record<string, any>; entries: RawRegisterElement[] }> = [];
+    const byName = new Map<string, RawRegisterElement>();
+    for (let peripheralIndex = 0; peripheralIndex < peripherals.length; peripheralIndex++) {
+        const registers = peripherals[peripheralIndex].registers;
+        if (registers === undefined || registers === '') {
+            scopes.push({ container: {}, entries: [] });
+            continue;
+        }
+        const container = asObject(registers, `${peripheralPaths[peripheralIndex]}.registers`);
+        const peripheralName = requireText(
+            peripherals[peripheralIndex], 'name', peripheralPaths[peripheralIndex]);
+        const registerNodes = toArray(container.register);
+        const entries: RawRegisterElement[] = [];
+        const localNames = new Set<string>();
+        for (let index = 0; index < registerNodes.length; index++) {
+            const registerPath = `${peripheralPaths[peripheralIndex]}.registers.register[${index}]`;
+            const node = asObject(registerNodes[index], registerPath);
+            const name = requireText(node, 'name', registerPath);
+            if (localNames.has(name)) {
+                throw new SvdParseError(`duplicate register name ${name} in peripheral ${peripheralName}`);
+            }
+            localNames.add(name);
+            const entry = { node, name, path: registerPath, peripheralName };
+            entries.push(entry);
+            byName.set(`${peripheralName}.${name}`, entry);
+        }
+        scopes.push({ container, entries });
+    }
+    const resolved = resolveDerivedElements(
+        scopes.flatMap(scope => scope.entries),
+        (entry, target) => resolveRegisterTarget(byName, entry, target),
+        mergeDerivedNode,
+    );
+    for (const scope of scopes) {
+        if (scope.entries.length === 0) {
+            continue;
+        }
+        scope.container.register = scope.entries.map(entry => resolved.get(entry)!);
+    }
+}
+
+function resolveRegisterTarget(
+    byName: Map<string, RawRegisterElement>,
+    entry: RawRegisterElement,
+    target: string,
+): RawRegisterElement | undefined {
+    const parts = target.split('.');
+    if (parts.length === 1) {
+        return byName.get(`${entry.peripheralName}.${parts[0]}`);
+    }
+    if (parts.length === 2) {
+        return byName.get(`${parts[0]}.${parts[1]}`);
+    }
+    return undefined;
+}
+
+function resolveDerivedFields(
+    peripherals: Record<string, any>[],
+    peripheralPaths: readonly string[],
+): void {
+    const scopes: Array<{ container: Record<string, any>; entries: RawFieldElement[] }> = [];
+    const byName = new Map<string, RawFieldElement>();
+    for (let peripheralIndex = 0; peripheralIndex < peripherals.length; peripheralIndex++) {
+        const registers = peripherals[peripheralIndex].registers;
+        if (registers === undefined || registers === '') {
+            continue;
+        }
+        const registerContainer = asObject(registers, `${peripheralPaths[peripheralIndex]}.registers`);
+        const peripheralName = requireText(
+            peripherals[peripheralIndex], 'name', peripheralPaths[peripheralIndex]);
+        const registerNodes = toArray(registerContainer.register);
+        for (let registerIndex = 0; registerIndex < registerNodes.length; registerIndex++) {
+            const registerPath =
+                `${peripheralPaths[peripheralIndex]}.registers.register[${registerIndex}]`;
+            const registerNode = asObject(registerNodes[registerIndex], registerPath);
+            const registerName = requireText(registerNode, 'name', registerPath);
+            const fields = registerNode.fields;
+            if (fields === undefined || fields === '') {
+                continue;
+            }
+            const container = asObject(fields, `${registerPath}.fields`);
+            const fieldNodes = toArray(container.field);
+            const entries: RawFieldElement[] = [];
+            const localNames = new Set<string>();
+            for (let index = 0; index < fieldNodes.length; index++) {
+                const fieldPath = `${registerPath}.fields.field[${index}]`;
+                const node = asObject(fieldNodes[index], fieldPath);
+                const name = requireText(node, 'name', fieldPath);
+                if (localNames.has(name)) {
+                    throw new SvdParseError(
+                        `duplicate field name ${name} in register ${peripheralName}.${registerName}`,
+                    );
+                }
+                localNames.add(name);
+                const entry = { node, name, path: fieldPath, peripheralName, registerName };
+                entries.push(entry);
+                byName.set(`${peripheralName}.${registerName}.${name}`, entry);
+            }
+            scopes.push({ container, entries });
+        }
+    }
+    const resolved = resolveDerivedElements(
+        scopes.flatMap(scope => scope.entries),
+        (entry, target) => resolveFieldTarget(byName, entry, target),
+        mergeFieldNode,
+    );
+    for (const scope of scopes) {
+        if (scope.entries.length === 0) {
+            continue;
+        }
+        scope.container.field = scope.entries.map(entry => resolved.get(entry)!);
+    }
+}
+
+function resolveFieldTarget(
+    byName: Map<string, RawFieldElement>,
+    entry: RawFieldElement,
+    target: string,
+): RawFieldElement | undefined {
+    const parts = target.split('.');
+    if (parts.length === 1) {
+        return byName.get(`${entry.peripheralName}.${entry.registerName}.${parts[0]}`);
+    }
+    if (parts.length === 2) {
+        return byName.get(`${entry.peripheralName}.${parts[0]}.${parts[1]}`);
+    }
+    if (parts.length === 3) {
+        return byName.get(`${parts[0]}.${parts[1]}.${parts[2]}`);
+    }
+    return undefined;
+}
+
+function resolveDerivedElements<T extends RawElement>(
+    entries: readonly T[],
+    lookup: (entry: T, target: string) => T | undefined,
+    merge: (base: Record<string, any>, node: Record<string, any>) => Record<string, any>,
+): Map<T, Record<string, any>> {
+    const resolved = new Map<T, Record<string, any>>();
+    const chain: T[] = [];
+    const resolve = (entry: T): Record<string, any> => {
+        const cached = resolved.get(entry);
+        if (cached !== undefined) {
+            return cached;
+        }
+        const cycleStart = chain.indexOf(entry);
+        if (cycleStart >= 0) {
+            const cycle = [...chain.slice(cycleStart), entry].map(item => item.name).join(' -> ');
+            throw new SvdParseError(`${entry.path}: cyclic derivedFrom reference: ${cycle}`);
+        }
+        chain.push(entry);
+        const target = readDerivedFrom(entry.node, entry.path);
+        let base: Record<string, any> = {};
+        if (target !== undefined) {
+            const parent = lookup(entry, target);
+            if (parent === undefined) {
+                throw new SvdParseError(`${entry.path}: unknown derivedFrom target: ${target}`);
+            }
+            base = resolve(parent);
+        }
+        const node = merge(base, entry.node);
+        chain.pop();
+        resolved.set(entry, node);
+        return node;
+    };
+    for (const entry of entries) {
+        resolve(entry);
+    }
+    return resolved;
+}
+
+function readDerivedFrom(node: Record<string, any>, path: string): string | undefined {
+    const value = node.$derivedFrom;
+    if (value === undefined) {
+        return undefined;
+    }
+    if (typeof value !== 'string') {
+        throw new SvdParseError(`${path}.$derivedFrom: expected text`);
+    }
+    const target = value.trim();
+    if (target === '') {
+        throw new SvdParseError(`${path}.$derivedFrom: expected a target name`);
+    }
+    return target;
+}
+
+function mergeDerivedNode(
+    base: Record<string, any>,
+    override: Record<string, any>,
+): Record<string, any> {
+    const merged = cloneXmlValue(base);
+    for (const key of Object.keys(override)) {
+        if (key !== '$derivedFrom') {
+            merged[key] = cloneXmlValue(override[key]);
+        }
+    }
+    return merged;
+}
+
+function mergeFieldNode(
+    base: Record<string, any>,
+    override: Record<string, any>,
+): Record<string, any> {
+    let inherited = base;
+    if (override.bitRange !== undefined) {
+        inherited = omitXmlKeys(base, ['bitOffset', 'bitWidth', 'lsb', 'msb']);
+    } else if (override.bitOffset !== undefined || override.bitWidth !== undefined) {
+        inherited = omitXmlKeys(base, ['lsb', 'msb', 'bitRange']);
+    } else if (override.lsb !== undefined || override.msb !== undefined) {
+        inherited = omitXmlKeys(base, ['bitOffset', 'bitWidth', 'bitRange']);
+    }
+    return mergeDerivedNode(inherited, override);
+}
+
+function omitXmlKeys(node: Record<string, any>, keys: readonly string[]): Record<string, any> {
+    const copy: Record<string, any> = {};
+    for (const key of Object.keys(node)) {
+        if (!keys.includes(key)) {
+            copy[key] = node[key];
+        }
+    }
+    return copy;
+}
+
+function cloneXmlValue<T>(value: T): T {
+    if (Array.isArray(value)) {
+        return value.map(item => cloneXmlValue(item)) as unknown as T;
+    }
+    if (value !== null && typeof value === 'object') {
+        const clone: Record<string, any> = {};
+        for (const key of Object.keys(value)) {
+            clone[key] = cloneXmlValue((value as Record<string, any>)[key]);
+        }
+        return clone as T;
+    }
+    return value;
 }
 
 function parsePeripheral(
