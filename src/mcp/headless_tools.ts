@@ -287,6 +287,10 @@ class HeadlessToolRunner {
                 return makeJsonResult(await this.debug.setBreakpoint(args));
             case 'eide_debug_remove_breakpoint':
                 return makeJsonResult(await this.debug.removeBreakpoint(args.id));
+            case 'eide_debug_backtrace':
+                return makeJsonResult(await this.debug.backtrace(args.maxDepth));
+            case 'eide_debug_list_breakpoints':
+                return makeJsonResult(await this.debug.listBreakpoints());
             case 'eide_debug_continue':
                 return makeJsonResult(await this.debug.continue(args.stopTimeoutMs));
             case 'eide_debug_interrupt':

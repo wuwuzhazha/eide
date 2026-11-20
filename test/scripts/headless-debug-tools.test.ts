@@ -82,12 +82,26 @@ class FakeGdb {
     }
 }
 
+let malformed: 'none' | 'backtrace' | 'breakpoints' = 'none';
+
 function response(command: string, token: number): string | string[] | undefined {
     if (command.startsWith('-gdb-set ')) {
         return `${token}^done\n(gdb) \n`;
     }
     if (command.startsWith('-target-select ')) {
         return `${token}^connected\n(gdb) \n`;
+    }
+    if (command === '-stack-list-frames') {
+        if (malformed === 'backtrace') {
+            return `${token}^done,stack=[frame={level="x",addr="0x08000000"}]\n(gdb) \n`;
+        }
+        return `${token}^done,stack=[frame={level="0",addr="0x08000000",func="main",file="main.c",fullname="C:\\\\fw\\\\main.c",line="10"},frame={level="1",addr="0x08000100",func="tick",file="main.c",line="20"},frame={level="2",addr="0x08000200"}]\n(gdb) \n`;
+    }
+    if (command === '-break-list') {
+        if (malformed === 'breakpoints') {
+            return `${token}^done,BreakpointTable={body=[bkpt={number="x"}]}\n(gdb) \n`;
+        }
+        return `${token}^done,BreakpointTable={nr_rows="2",nr_cols="6",hdr=[],body=[bkpt={number="1",type="breakpoint",disp="keep",enabled="y",addr="0x08000000",func="main",file="main.c",line="10",times="2"},bkpt={number="2",type="breakpoint",disp="keep",enabled="n",addr="<PENDING>",times="0"}]}\n(gdb) \n`;
     }
     if (command.startsWith('-data-evaluate-expression ')) {
         const expression = /^"\$(\w+)"$/.exec(command.slice('-data-evaluate-expression '.length));
@@ -246,6 +260,40 @@ async function run(): Promise<void> {
         uid: 'debug-uid', location: 'main', hardware: true
     }));
     assert(data.id === 1 && data.functionName === 'main', 'headless debug: set breakpoint');
+
+    data = parse(await execute('eide_debug_backtrace', { uid: 'debug-uid' }));
+    assert(Array.isArray(data) && data.length === 3, 'headless debug: backtrace returns frames');
+    assert(data[0].functionName === 'main' && data[0].line === 10,
+        'headless debug: backtrace frame fields');
+    assert(data[2].functionName === undefined, 'headless debug: backtrace optional fields');
+
+    data = parse(await execute('eide_debug_backtrace', { uid: 'debug-uid', maxDepth: 1 }));
+    assert(data.length === 1 && data[0].level === 0, 'headless debug: backtrace maxDepth');
+    result = await execute('eide_debug_backtrace', { uid: 'debug-uid', maxDepth: 0 });
+    assert(result.isError === true && result.content[0].text.includes('maxDepth'),
+        'headless debug: backtrace rejects maxDepth 0');
+    result = await execute('eide_debug_backtrace', { uid: 'debug-uid', maxDepth: 201 });
+    assert(result.isError === true && result.content[0].text.includes('maxDepth'),
+        'headless debug: backtrace rejects maxDepth 201');
+    result = await execute('eide_debug_backtrace', { uid: 'debug-uid', maxDepth: '2' });
+    assert(result.isError === true && result.content[0].text.includes('maxDepth'),
+        'headless debug: backtrace rejects non-numeric maxDepth');
+    malformed = 'backtrace';
+    result = await execute('eide_debug_backtrace', { uid: 'debug-uid' });
+    assert(result.isError === true && result.content[0].text.includes('level'),
+        'headless debug: backtrace rejects malformed frames');
+    malformed = 'none';
+
+    data = parse(await execute('eide_debug_list_breakpoints', { uid: 'debug-uid' }));
+    assert(Array.isArray(data) && data.length === 2, 'headless debug: list breakpoints');
+    assert(data[0].id === 1 && data[0].enabled === true && data[0].hitCount === 2,
+        'headless debug: breakpoint list fields');
+    assert(data[1].enabled === false && data[1].address === undefined,
+        'headless debug: pending breakpoint list fields');
+    malformed = 'breakpoints';
+    result = await execute('eide_debug_list_breakpoints', { uid: 'debug-uid' });
+    assert(result.isError === true, 'headless debug: breakpoint list rejects malformed response');
+    malformed = 'none';
 
     data = parse(await execute('eide_debug_continue', { uid: 'debug-uid' }));
     assert(data.class === 'stopped' && data.results.reason === 'breakpoint-hit',
