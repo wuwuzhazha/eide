@@ -7,6 +7,7 @@ import { StderrLogger } from '../core/logger';
 import { NodeProcessRunner } from '../core/process_runner';
 import { loadProjectSnapshot } from '../core/project_snapshot';
 import { BuildRequest } from '../core/types';
+import { bundledResourcesDir } from '../headless/package_paths';
 import { CliOptions, CliUsageError, cliHelp, parseCliArgs } from './args';
 
 export interface CliIo {
@@ -21,13 +22,6 @@ const processIo: CliIo = {
 
 function usageError(message: string): CliUsageError {
     return new CliUsageError(message);
-}
-
-function requireOption(value: string | undefined, name: string): string {
-    if (!value) {
-        throw usageError(`Missing required option: ${name}`);
-    }
-    return value;
 }
 
 function toRequest(options: CliOptions): BuildRequest {
@@ -106,7 +100,7 @@ export async function main(argv: string[], io: CliIo = processIo): Promise<numbe
         }
 
         const service = new EideBuildService({
-            resourcesDir: requireOption(options.resourcesDir, '--resources'),
+            resourcesDir: options.resourcesDir ?? bundledResourcesDir(),
             extensionRoot: options.extensionRoot,
             toolchainPath: options.toolchainPath,
             settingsFile: options.settingsFile,

@@ -7,6 +7,7 @@ import {
     HeadlessMemento
 } from './vscode_shim';
 import { findExtensionRoot, loadHeadlessSettings } from './settings';
+import { ensureBundledToolPermissions } from './tool_permissions';
 import { EXTENSION_ID } from '../ExtensionInfo';
 import { installVscodeShim } from './vscode';
 
@@ -165,6 +166,8 @@ export async function openHeadlessProject(
     options: HeadlessHostOptions
 ): Promise<HeadlessProjectSession> {
     installVscodeShim();
+    process.env['DOTNET_CLI_TELEMETRY_OPTOUT'] = '1';
+    process.env['DOTNET_ROLL_FORWARD'] = 'Major';
 
     const { root, workspaceFile } = resolveWorkspace(options.projectPath, options.workspaceFile);
     const config = readProjectConfig(workspaceFile);
@@ -221,6 +224,7 @@ export async function openHeadlessProject(
 
     platform.init(context as any);
     ResManager.GetInstance(context as any);
+    ensureBundledToolPermissions(options.resourcesDir);
     ensureSameExtensionRoot(extensionRoot);
     SettingManager.GetInstance(context as any);
 

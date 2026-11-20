@@ -1,6 +1,7 @@
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { NodeProcessRunner } from '../core/process_runner';
 import { StderrLogger } from '../core/logger';
+import { bundledResourcesDir } from '../headless/package_paths';
 import { createHeadlessToolExecutor, HeadlessToolOptions } from './headless_tools';
 import { createMcpServer } from './mcp_proxy_tools';
 
@@ -8,12 +9,12 @@ const DEFAULT_BUILD_TIMEOUT_MS = 30 * 60 * 1000;
 const DEFAULT_FLASH_TIMEOUT_MS = 2 * 60 * 1000;
 
 const usage = [
-    'Usage: eide-mcp --project <dir> --resources <dir> --toolchain-path <dir> [options]',
+    'Usage: eide-mcp --project <dir> [options]',
     '',
     'Options:',
     '  -p, --project <dir>       Project root (repeatable)',
     '  -t, --target <name>       Active build target',
-    '      --resources <dir>     EIDE resources directory (the extension res folder)',
+    '      --resources <dir>     EIDE resources directory (default: bundled res folder)',
     '      --extension-root <dir> Extension root (default: parent of --resources)',
     '      --toolchain-path <dir> Toolchain installation directory (optional with xpack)',
     '      --settings <file>     JSON file with EIDE.* settings overrides',
@@ -129,7 +130,7 @@ function parseArguments(argv: string[]): ServerArguments | undefined {
         throw new UsageError("Missing required option: '--project'.");
     }
     if (!resourcesDir) {
-        throw new UsageError("Missing required option: '--resources'.");
+        resourcesDir = bundledResourcesDir();
     }
     return {
         projectPaths,

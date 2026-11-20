@@ -50,7 +50,7 @@ export const cliHelp = [
     '      --cxxflag <flags>        Append C++ compiler flags (repeatable)',
     '      --asmflag <flags>        Append assembler flags (repeatable)',
     '      --ldflag <flags>         Append linker flags (repeatable)',
-    '      --resources <dir>        EIDE resources directory (the extension res folder)',
+    '      --resources <dir>        EIDE resources directory (default: bundled res folder)',
     '      --extension-root <dir>   Extension root (default: parent of --resources)',
     '      --toolchain-path <dir>   Toolchain installation directory',
     '      --settings <file>        JSON file with EIDE.* settings overrides',

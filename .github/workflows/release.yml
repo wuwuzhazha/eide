@@ -72,6 +72,9 @@ jobs:
             exit 1
           fi
 
+      - name: Package headless distribution
+        run: npm run package:headless
+
       - name: Setup Node.js 22 for VSIX packaging
         uses: actions/setup-node@v5
         with:
@@ -100,6 +103,7 @@ jobs:
           generate_release_notes: true
           files: |
             eide-pro-${{ steps.version.outputs.version }}.vsix
+            artifacts/eide-pro-headless-${{ steps.version.outputs.version }}.tgz
             eide-mcp-tools-skill.zip
           fail_on_unmatched_files: true
         env:

@@ -64,8 +64,21 @@ Open VSX 的编辑器（例如 VSCodium 或 code-server）中执行该命令。�
 **Extensions: Install from VSIX...** 安装：
 
 ```bash
-code --install-extension ./eide-pro-4.0.2.vsix
+code --install-extension ./eide-pro-4.1.0.vsix
 ```
+
+### Headless CLI 与 MCP
+
+从 [GitHub Releases](https://github.com/wuwuzhazha/eide-pro/releases) 下载
+`eide-pro-headless-<version>.tgz`，然后全局安装：
+
+```bash
+npm install -g ./eide-pro-headless-<version>.tgz
+```
+
+这会安装 `eide-cli` 和 `eide-mcp` 命令，无需 VS Code。安装包内含工具链模型、
+构建器二进制和资源目录；运行环境需要 Node.js 18+ 和 .NET 6+ runtime。详见
+[Headless CLI 与 MCP 指南](./docs/headless.md)。
 
 ### 从源码构建
 
@@ -108,12 +121,11 @@ xpack 管理的工具链。
 
 ### CLI
 
-执行 `npm run webpack:headless` 后，或从已打包的扩展中运行：
+使用已安装的发行包构建：
 
 ```bash
-node dist/eide_cli.js build \
+eide-cli build \
   --project ./firmware \
-  --resources ./res \
   --toolchain-path ./gcc
 ```
 
@@ -123,14 +135,13 @@ node dist/eide_cli.js build \
 退出码、构建结果字段和烧录选项见 [docs/headless.md](./docs/headless.md)。
 
 独立 bundle 为 `dist/eide_cli.js` 和 `dist/eide_mcp.js`；对应的 package bin
-名称为 `eide-cli` 和 `eide-mcp`。
+名称为 `eide-cli` 和 `eide-mcp`。从开发树直接运行时使用 `node dist/...`。
 
 ### MCP
 
 ```bash
-node dist/eide_mcp.js \
+eide-mcp \
   --project ./firmware \
-  --resources ./res \
   --toolchain-path ./gcc
 ```
 
@@ -186,7 +197,8 @@ EIDE Pro 使用与上游相同的 `.eide/eide.yml` 工程模型和工具链定�
 | `src/mcp/` | `eide-mcp` 入口（`src/mcp/eide_mcp.ts`）、stdio 服务器、工具与 GDB 集成 |
 | `src/html/` | Webview 资源，包括调用图视图 |
 | `res/` | 模板、工具链元数据、内置工具和图标 |
-| `test/` | 测试运行器和测试脚本 |
+| `test/` | 测试运行器、测试脚本和安装包 E2E fixture |
+| `scripts/` | 发布和 Headless 打包脚本 |
 | `docs/` | Headless CLI/MCP 与 agent skill 文档 |
 | `lib/node-utility/` | 共享工具子模块 |
 
@@ -205,10 +217,14 @@ MCP 协议行为以及 GDB/SVD 解析。
 常用命令：
 
 ```bash
-npm run compile           # 使用 tsc 编译 src
-npm run webpack           # 以开发模式构建扩展
-npm run webpack:headless  # 构建 dist/eide_cli.js 和 dist/eide_mcp.js
+npm run compile                # 使用 tsc 编译 src
+npm run webpack                # 以开发模式构建扩展
+npm run webpack:headless       # 构建 dist/eide_cli.js 和 dist/eide_mcp.js
+npm run package:headless       # 生成 artifacts/eide-pro-headless-<version>.tgz
+npm run test:headless-package  # 安装 tgz、构建 Cortex-M fixture 并验证 MCP
 ```
+
+安装包 E2E 需要 ARM GCC（`ARM_GCC_ROOT`，默认 `/usr`）和 .NET 6+ runtime。
 
 ## 贡献
 
