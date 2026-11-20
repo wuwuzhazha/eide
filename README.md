@@ -71,7 +71,7 @@ it from the command line or with **Extensions: Install from VSIX...** in VS
 Code:
 
 ```bash
-code --install-extension ./eide-pro-4.1.1.vsix
+code --install-extension ./eide-pro-4.2.0.vsix
 ```
 
 ### Headless CLI and MCP
@@ -166,9 +166,10 @@ eide-mcp \
 The stdio server exposes project build/rebuild, clean, flash,
 target/source/include configuration, stack usage, and callgraph tools. When
 started with `--gdb`, it also exposes GDB-backed tools for connecting, reading
-registers and memory, setting and listing breakpoints, backtraces, continuing
-and interrupting execution, evaluating expressions, decoding Cortex-M faults,
-and looking up SVD symbols (including `derivedFrom` inheritance).
+registers and memory, setting and listing breakpoints, backtraces, thread and
+frame selection, local-variable inspection, step over/into/out, continuing and
+interrupting execution, evaluating expressions, decoding Cortex-M faults, and
+looking up SVD symbols (including `derivedFrom` inheritance).
 
 VS Code also exposes an HTTP MCP server. Enable it with
 `EIDE.MCP.Server.Enable` and set the port with `EIDE.MCP.Server.Port` (default

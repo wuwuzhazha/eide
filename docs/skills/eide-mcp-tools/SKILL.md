@@ -19,7 +19,7 @@ groups, env.ini expansion, and virtual source folders.
 | Mode | How it is configured | Requires VS Code | Tools |
 |------|----------------------|------------------|-------|
 | VS Code HTTP MCP | `http://localhost:8940/mcp` plus `EIDE.MCP.Server.Enable` | Yes, with the project open | 21 project/build tools |
-| Headless stdio MCP | `eide-mcp --project ...` from the headless package | No | 35 tools, including 14 debug tools |
+| Headless stdio MCP | `eide-mcp --project ...` from the headless package | No | 42 tools, including 21 debug tools |
 
 If `eide_debug_*` tools are present, it is the headless server. The headless
 server discovers its projects from launch arguments, so there is no "add
@@ -227,7 +227,14 @@ before connecting; the default ELF is
 | `eide_debug_remove_breakpoint` | `uid`, `id` |
 | `eide_debug_backtrace` | `uid`, `maxDepth?` (1–200, default all frames) |
 | `eide_debug_list_breakpoints` | `uid` |
+| `eide_debug_list_threads` | `uid` |
+| `eide_debug_select_thread` | `uid`, `id` |
+| `eide_debug_select_frame` | `uid`, `level` (0 is innermost) |
+| `eide_debug_list_variables` | `uid`, optional `threadId`, `frameLevel` |
 | `eide_debug_continue` | `uid`, `stopTimeoutMs?` (default 30000) |
+| `eide_debug_step_over` | `uid`, `stopTimeoutMs?` |
+| `eide_debug_step_into` | `uid`, `stopTimeoutMs?` |
+| `eide_debug_step_out` | `uid`, `stopTimeoutMs?` |
 | `eide_debug_interrupt` | `uid` |
 | `eide_debug_evaluate` | `uid`, `expression` |
 | `eide_debug_fault` | `uid`, optional `hfsr`, `cfsr`, `mmar`, `bfar` |
@@ -238,8 +245,11 @@ HFSR/CFSR/MMAR/BFAR from the active session when values are omitted.
 `eide_debug_backtrace` returns frames with level, address, and optional
 function/file/line/fullname. `eide_debug_list_breakpoints` returns breakpoint
 type, enabled state, address, source location, condition, hit count, and nested
-locations for multi-location breakpoints. The session stays active until
-disconnect or server exit; only one session can exist at a time.
+locations for multi-location breakpoints. `eide_debug_list_threads` returns
+`threads` and `currentThreadId`; `eide_debug_list_variables` returns local
+variables and arguments for the current or selected thread/frame. The step
+tools and `eide_debug_continue` wait for the next stop event. The session stays
+active until disconnect or server exit; only one session can exist at a time.
 
 Debug workflow:
 
@@ -247,7 +257,13 @@ Debug workflow:
 eide_debug_connect(uid, target="localhost:3333")
 eide_debug_set_breakpoint(uid, location="main")
 eide_debug_continue(uid)
+eide_debug_list_threads(uid)
 eide_debug_backtrace(uid, maxDepth=20)
+eide_debug_select_frame(uid, level=0)
+eide_debug_list_variables(uid)
+eide_debug_step_over(uid)
+eide_debug_step_into(uid)
+eide_debug_step_out(uid)
 eide_debug_list_breakpoints(uid)
 eide_debug_read_register(uid, name="pc")
 eide_debug_evaluate(uid, expression="counter")

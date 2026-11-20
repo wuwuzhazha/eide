@@ -6,6 +6,22 @@ All notable version changes will be recorded in this file.
 
 ***
 
+### [v4.2.0]
+
+**New**:
+  - Added headless GDB/MI stepping: `eide_debug_step_over`, `eide_debug_step_into`, and `eide_debug_step_out`, each waiting for the next stop event.
+  - Added thread and frame inspection: `eide_debug_list_threads`, `eide_debug_select_thread`, and `eide_debug_select_frame`.
+  - Added `eide_debug_list_variables` for local variables and arguments, optionally scoped to a thread and frame.
+  - The headless MCP server now exposes 42 tools, including 21 debug tools.
+
+**Fixes**:
+  - Step commands validate `stopTimeoutMs` before sending the GDB command, so an invalid timeout cannot move the target.
+
+**Docs**:
+  - Documented the expanded debug workflow in the headless guide and EIDE MCP skill.
+
+***
+
 ### [v4.1.1]
 
 **Fixes**:

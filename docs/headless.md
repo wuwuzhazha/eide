@@ -199,7 +199,10 @@ It additionally exposes debug tools, backed by GDB/MI:
 - `eide_debug_read_register`, `eide_debug_read_memory`, `eide_debug_write_memory`
 - `eide_debug_set_breakpoint`, `eide_debug_remove_breakpoint`
 - `eide_debug_backtrace`, `eide_debug_list_breakpoints`
-- `eide_debug_continue`, `eide_debug_interrupt`, `eide_debug_evaluate`
+- `eide_debug_list_threads`, `eide_debug_select_thread`, `eide_debug_select_frame`
+- `eide_debug_list_variables` (locals and arguments)
+- `eide_debug_continue`, `eide_debug_step_over`, `eide_debug_step_into`, `eide_debug_step_out`
+- `eide_debug_interrupt`, `eide_debug_evaluate`
 - `eide_debug_fault` (Cortex-M fault register decoding)
 - `eide_debug_svd_lookup` (peripheral/register lookup by address or name)
 
