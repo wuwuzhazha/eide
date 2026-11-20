@@ -1,0 +1,110 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build and publish release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout full history
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Init submodules
+        run: git -c url."https://github.com/".insteadOf="git@github.com:" submodule update --init --recursive
+
+      - name: Setup Node.js 18
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: npm
+
+      - name: Validate tag version
+        id: version
+        shell: bash
+        run: |
+          tag_version="${GITHUB_REF_NAME#v}"
+          package_version="$(node -p "require('./package.json').version")"
+          if [ "$tag_version" != "$package_version" ]; then
+            echo "::error::Tag ${GITHUB_REF_NAME} does not match package.json version ${package_version}"
+            exit 1
+          fi
+          echo "version=${package_version}" >> "$GITHUB_OUTPUT"
+
+      - name: Require Open VSX token
+        shell: bash
+        env:
+          OPEN_VSX_PAT: ${{ secrets.OPEN_VSX_PAT }}
+        run: |
+          if [ -z "$OPEN_VSX_PAT" ]; then
+            echo "::error::Repository secret OPEN_VSX_PAT is required to publish to Open VSX."
+            exit 1
+          fi
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm test
+
+      - name: Build extension and headless bundles
+        run: npm run vscode:prepublish
+
+      - name: Verify build artifacts
+        shell: bash
+        run: |
+          missing=()
+          for artifact in extension.js mcp_server.js eide_cli.js eide_mcp.js; do
+            if [ ! -f "dist/$artifact" ]; then
+              missing+=("dist/$artifact")
+            fi
+          done
+          if [ ${#missing[@]} -ne 0 ]; then
+            echo "::error::Missing build artifacts: ${missing[*]}"
+            exit 1
+          fi
+
+      - name: Package VSIX
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: npx --yes @vscode/vsce@2.15.0 package --out "eide-pro-${VERSION}.vsix"
+
+      - name: Package MCP skill archive
+        shell: bash
+        run: |
+          cd docs/skills
+          zip -q -X "$GITHUB_WORKSPACE/eide-mcp-tools-skill.zip" eide-mcp-tools/SKILL.md
+          entries="$(unzip -Z1 "$GITHUB_WORKSPACE/eide-mcp-tools-skill.zip")"
+          if [ "$entries" != "eide-mcp-tools/SKILL.md" ]; then
+            echo "::error::eide-mcp-tools-skill.zip has unexpected entries: ${entries}"
+            exit 1
+          fi
+
+      - name: Create or update GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            eide-pro-${{ steps.version.outputs.version }}.vsix
+            eide-mcp-tools-skill.zip
+          fail_on_unmatched_files: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node.js 22 for Open VSX CLI
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Publish to Open VSX
+        env:
+          OPEN_VSX_PAT: ${{ secrets.OPEN_VSX_PAT }}
+          VSIX_FILE: eide-pro-${{ steps.version.outputs.version }}.vsix
+        run: npx --yes ovsx@latest publish "$VSIX_FILE" --pat "$OPEN_VSX_PAT"

@@ -1,21 +1,52 @@
 name: CI
 
-on: [push, pull_request]
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    name: Build (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
     steps:
-      - uses: actions/checkout@v5
+      - name: Checkout
+        uses: actions/checkout@v4
 
       - name: Init submodules
         run: git -c url."https://github.com/".insteadOf="git@github.com:" submodule update --init --recursive
 
-      - uses: actions/setup-node@v5
+      - name: Setup Node.js 18
+        uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 18
           cache: npm
 
-      - run: npm ci
-      - run: npm test
-      - run: npm run webpack
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm test
+
+      - name: Build extension and headless bundles
+        run: npm run vscode:prepublish
+
+      - name: Verify build artifacts
+        shell: bash
+        run: |
+          missing=()
+          for artifact in extension.js mcp_server.js eide_cli.js eide_mcp.js; do
+            if [ ! -f "dist/$artifact" ]; then
+              missing+=("dist/$artifact")
+            fi
+          done
+          if [ ${#missing[@]} -ne 0 ]; then
+            echo "::error::Missing build artifacts: ${missing[*]}"
+            exit 1
+          fi
